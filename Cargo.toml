@@ -1,0 +1,17 @@
+[workspace.package]
+authors = ["Andcool-Systems"]
+version = "0.1.0"
+edition = "2024"
+repository = ""
+
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(docsrs_dep)'] }
+
+[workspace.dependencies]
+anyhow = "1.0.104"
+serialport = { version = "4.9.0", default-features = false }
+tokio = { version = "1.53.1", features = ["full"] }

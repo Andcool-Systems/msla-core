@@ -1,0 +1,52 @@
+use anyhow::Result;
+use image::GenericImageView;
+use memmap2::MmapOptions;
+use std::{
+    fs::{File, OpenOptions},
+    path::PathBuf,
+};
+
+/// Printer LCD display controller
+pub struct LCDController {
+    fb: File,
+}
+
+impl LCDController {
+    pub fn show_image(&self, path: PathBuf) -> Result<()> {
+        let img = image::open(path)?;
+        let (width, height) = img.dimensions();
+
+        // Calculate the buffer size in bytes (4 bytes per pixel for 32-bit ARGB/XRGB)
+        let fb_size = (width * height * 4) as usize;
+
+        let mut mmap = unsafe { MmapOptions::new().len(fb_size).map_mut(&self.fb)? };
+        let mut fb_index = 0;
+
+        for (_x, _y, pixel) in img.pixels() {
+            let channels = pixel.0;
+            let luma = channels[0];
+
+            let color_val: u32 = if luma > 127 {
+                0xFFFFFFFF // White
+            } else {
+                0xFF000000 // Black
+            };
+
+            let byte_offset = fb_index * 4;
+            if byte_offset + 3 < mmap.len() {
+                mmap[byte_offset..byte_offset + 4].copy_from_slice(&color_val.to_ne_bytes());
+            }
+
+            fb_index += 1;
+        }
+
+        mmap.flush()?;
+        Ok(())
+    }
+
+    pub fn new() -> Result<Self> {
+        let fb = OpenOptions::new().read(true).write(true).open("/dev/fb0")?;
+
+        Ok(Self { fb })
+    }
+}

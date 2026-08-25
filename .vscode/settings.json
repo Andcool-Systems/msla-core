@@ -1,0 +1,12 @@
+{
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 250,
+    "cSpell.words": [
+        "microsteps",
+        "msla",
+        "oneshot",
+        "serialport",
+        "uart",
+        "uarts"
+    ]
+}

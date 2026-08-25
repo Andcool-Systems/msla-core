@@ -1,0 +1,15 @@
+[package]
+name = "msla-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow = {workspace = true}
+serialport = {workspace = true}
+tokio = {workspace = true}
+image = "0.25.10"
+memmap2 = "0.9"
+zip = "8.6.0"
+tempfile = "3.27.0"

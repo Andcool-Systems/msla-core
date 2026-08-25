@@ -1,0 +1,12 @@
+[package]
+name = "msla-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+
+[dependencies]
+msla-core = { path = "../core" }
+anyhow = {workspace = true}
+tokio = {workspace = true}

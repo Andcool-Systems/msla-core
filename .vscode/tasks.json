@@ -1,0 +1,113 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Rust Project",
+            "detail": "Run Rust application",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "run",
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "runOptions": {
+                "reevaluateOnRerun": true
+            },
+            "options": {
+                "statusbar": {
+                    "label": "$(debug-start) Run"
+                }
+            }
+        },
+        {
+            "label": "Build",
+            "detail": "Build Rust application",
+            "type": "shell",
+            "command": "cargo zigbuild --release --target aarch64-unknown-linux-gnu",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "runOptions": {
+                "reevaluateOnRerun": true
+            },
+            "options": {
+                "statusbar": {
+                    "label": "$(build) Build"
+                }
+            }
+        },
+        {
+            "label": "Test",
+            "detail": "Test Rust application",
+            "type": "shell",
+            "command": "cargo test golden_tests -- --nocapture; cargo doc --workspace --all-features --no-deps --locked",
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "runOptions": {
+                "reevaluateOnRerun": true
+            },
+            "options": {
+                "statusbar": {
+                    "label": "$(beaker) Test"
+                }
+            }
+        },
+        {
+            "label": "Clippy",
+            "detail": "Run Clippy Test",
+            "type": "shell",
+            "command": "cargo clippy --workspace --all-features --all-targets --locked -- -D warnings --allow deprecated",
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "runOptions": {
+                "reevaluateOnRerun": true
+            },
+            "options": {
+                "statusbar": {
+                    "label": "$(sparkle) Clippy"
+                }
+            }
+        },
+        {
+            "label": "Rust fmt",
+            "detail": "Run rust fmt",
+            "type": "shell",
+            "command": "cargo fmt",
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "runOptions": {
+                "reevaluateOnRerun": true
+            },
+            "options": {
+                "statusbar": {
+                    "label": "$(sparkle) Rust fmt"
+                }
+            }
+        }
+    ]
+}
