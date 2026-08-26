@@ -1,6 +1,5 @@
-use anyhow::{Result, anyhow};
-
 use crate::uart::{SYNC_BYTES, SYNC_LEN};
+use anyhow::{Result, anyhow};
 
 /// CRC8 Generator
 fn crc8(data: &[u8]) -> u8 {

@@ -19,8 +19,8 @@ pub struct UART {
 
 impl UART {
     /// Open uart port by name/path
-    pub fn open(name: impl Into<String>) -> Result<Self> {
-        let serial = serialport::new(name.into(), 115200)
+    pub fn open(name: impl Into<String>, baud_rate: u32) -> Result<Self> {
+        let serial = serialport::new(name.into(), baud_rate)
             .timeout(Duration::from_millis(50))
             .open()?;
 

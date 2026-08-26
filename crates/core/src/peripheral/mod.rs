@@ -1,6 +1,9 @@
 use std::{sync::Arc, time::Duration};
 
-use crate::uart::{UART, packet::UARTPacket, uart_client::UARTClient};
+use crate::{
+    config::get_config,
+    uart::{UART, packet::UARTPacket, uart_client::UARTClient},
+};
 use anyhow::{Result, anyhow};
 
 pub enum MovingZStatus {
@@ -14,9 +17,14 @@ pub struct PeripheralController {
 
 impl PeripheralController {
     /// Creates new peripheral controller
-    pub fn new() -> Result<Self> {
+    pub async fn new() -> Result<Self> {
+        let config = get_config().await;
+
         Ok(Self {
-            uart: UARTClient::new(UART::open("COM3")?)?,
+            uart: UARTClient::new(UART::open(
+                config.peripheral.uart.clone(),
+                config.peripheral.baud_rate,
+            )?)?,
         })
     }
 
@@ -77,5 +85,11 @@ impl PeripheralController {
         packet
             .read_u16()
             .ok_or(anyhow!("Current in packet not found"))
+    }
+}
+
+impl Drop for PeripheralController {
+    fn drop(&mut self) {
+        let _ = self.turn_uv(false);
     }
 }

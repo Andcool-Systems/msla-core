@@ -5,9 +5,8 @@
             "label": "Run Rust Project",
             "detail": "Run Rust application",
             "type": "shell",
-            "command": "cargo",
+            "command": "cargo run --bin msla-core",
             "args": [
-                "run",
             ],
             "group": {
                 "kind": "test",

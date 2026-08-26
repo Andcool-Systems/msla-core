@@ -6,8 +6,8 @@ pub mod zip;
 /// Represents an abstraction around model for printing
 #[derive(Debug)]
 pub struct Model {
-    ir: Vec<PrintingIR>,
+    pub ir: Vec<PrintingIR>,
 
-    working_dir: TempDir,
-    model_preview: Option<PathBuf>,
+    pub working_dir: TempDir,
+    pub model_preview: Option<PathBuf>,
 }

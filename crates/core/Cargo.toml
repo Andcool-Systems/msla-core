@@ -13,3 +13,5 @@ image = "0.25.10"
 memmap2 = "0.9"
 zip = "8.6.0"
 tempfile = "3.27.0"
+serde = { version = "1.0.217", features = ["derive"] }
+toml = "0.8.20"
