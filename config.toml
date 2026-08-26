@@ -1,3 +1,6 @@
+[global]
+logging_level = "debug"
+
 [peripheral]
 uart = "COM3"
 baud_rate = 115200

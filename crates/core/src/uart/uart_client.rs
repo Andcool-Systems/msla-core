@@ -12,6 +12,7 @@ use tokio::{
     sync::{Mutex, oneshot},
     time::timeout,
 };
+use tracing::{error, warn};
 
 pub struct UARTClient {
     pub writer: OnceLock<Sender<UARTCommand>>,
@@ -54,7 +55,7 @@ impl UARTClient {
                     },
                     Ok(None) => continue,
                     Err(err) => {
-                        eprintln!("Failed to read from UART: {err}");
+                        error!("Failed to read from UART: {err}");
                         continue;
                     },
                 }
@@ -123,7 +124,7 @@ impl UARTClient {
                 },
 
                 Err(_) => {
-                    eprintln!("UART: timeout waiting for 0x{:02X}", response_id);
+                    warn!("UART: timeout waiting for 0x{:02X}", response_id);
 
                     // Удаляем старый receiver.
                     self.pending.lock().await.take();

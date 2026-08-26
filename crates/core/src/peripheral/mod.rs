@@ -86,6 +86,24 @@ impl PeripheralController {
             .read_u16()
             .ok_or(anyhow!("Current in packet not found"))
     }
+
+    /// Disable stepper (driver EN pin)
+    pub async fn disable_steppers(&self) -> Result<()> {
+        self.uart
+            .request(UARTPacket::new(58, &[]), Duration::from_millis(500), 3)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Enable stepper (driver EN pin)
+    pub async fn enable_steppers(&self) -> Result<()> {
+        self.uart
+            .request(UARTPacket::new(60, &[]), Duration::from_millis(500), 3)
+            .await?;
+
+        Ok(())
+    }
 }
 
 impl Drop for PeripheralController {

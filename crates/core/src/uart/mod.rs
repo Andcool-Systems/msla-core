@@ -1,6 +1,6 @@
 pub mod packet;
 pub mod uart_client;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use serialport::SerialPort;
 use std::time::{Duration, Instant};
 
@@ -19,10 +19,11 @@ pub struct UART {
 
 impl UART {
     /// Open uart port by name/path
-    pub fn open(name: impl Into<String>, baud_rate: u32) -> Result<Self> {
-        let serial = serialport::new(name.into(), baud_rate)
+    pub fn open(name: impl Into<String> + Clone, baud_rate: u32) -> Result<Self> {
+        let serial = serialport::new(name.clone().into(), baud_rate)
             .timeout(Duration::from_millis(50))
-            .open()?;
+            .open()
+            .map_err(|e| anyhow!("Cannot open serial port {}: {}", name.into(), e))?;
 
         Ok(Self {
             _serial: serial,
