@@ -6,7 +6,7 @@ use tempfile::{TempDir, tempdir};
 use tokio::fs;
 use zip::ZipArchive;
 
-use crate::input::{Model, zip::gcode::parse_gcode};
+use crate::input::{Model, zip::gcode::GCodeParser};
 
 /// Load zip model from file
 pub async fn load_zip_model(zip_path: impl AsRef<std::path::Path>) -> Result<Model> {
@@ -17,10 +17,12 @@ pub async fn load_zip_model(zip_path: impl AsRef<std::path::Path>) -> Result<Mod
         .await
         .map_err(|e| anyhow!("Cannot open gcode file: {}", e))?;
 
-    let ir = parse_gcode(gcode)?;
+    let mut gparser = GCodeParser::new();
+    gparser.parse_gcode(gcode)?;
 
     Ok(Model {
-        ir,
+        ir: gparser.ir,
+        model_meta: gparser.meta,
         working_dir: temp_dir,
         model_preview: None,
     })

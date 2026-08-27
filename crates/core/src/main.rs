@@ -12,7 +12,9 @@ use tokio::time::sleep;
 use tracing::{Level, error, info};
 
 use crate::{
-    input::zip::load_zip_model, lcd::LCDController, messaging::ir::PrintingIR,
+    input::zip::load_zip_model,
+    lcd::LCDController,
+    messaging::ir::{MetaIR, PrintingIR},
     peripheral::PeripheralController,
 };
 
@@ -64,6 +66,17 @@ async fn main() -> Result<()> {
                     info!("Disable steppers");
                     controller.disable_steppers().await?;
                 },
+
+                PrintingIR::Meta(meta) => match meta {
+                    MetaIR::LayerStart(n) => info!(
+                        "------------------ Printing layer {} ({:.2}%) ------------------",
+                        n,
+                        (n as f64 / model.model_meta.total_layer_count as f64) * 100.0
+                    ),
+                    MetaIR::LayerEnd => {
+                        info!("------------------ Layer finished ------------------")
+                    },
+                },
             }
         }
 
@@ -71,7 +84,7 @@ async fn main() -> Result<()> {
     };
 
     match f().await {
-        Ok(_) => {},
+        Ok(_) => info!("Printing done! Goodbye <3"),
         Err(e) => error!("Internal error occurred: {}", e),
     }
 

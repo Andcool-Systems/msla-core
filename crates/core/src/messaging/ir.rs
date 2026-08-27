@@ -11,4 +11,12 @@ pub enum PrintingIR {
     Wait(Duration),
 
     DisableSteppers,
+
+    Meta(MetaIR),
+}
+
+#[derive(Debug)]
+pub enum MetaIR {
+    LayerStart(u32),
+    LayerEnd,
 }

@@ -10,9 +10,9 @@ fn crc8(data: &[u8]) -> u8 {
 
         for _ in 0..8 {
             if (crc & 0x80) != 0 {
-                crc = ((crc << 1) ^ 0x07) & 0xFF;
+                crc = (crc << 1) ^ 0x07;
             } else {
-                crc = (crc << 1) & 0xFF;
+                crc <<= 1;
             }
         }
     }
@@ -122,7 +122,7 @@ impl UARTPacket {
 
 impl UARTPacket {
     /// Write u16 to end of packet payload
-    pub fn write_u16(&mut self, val: u16) -> () {
+    pub fn write_u16(&mut self, val: u16) {
         self.payload.extend(val.to_le_bytes());
     }
 }

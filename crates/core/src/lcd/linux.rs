@@ -5,6 +5,7 @@ use std::{
     fs::{File, OpenOptions},
     path::PathBuf,
 };
+use tracing::debug;
 
 /// Printer LCD display controller
 pub struct LCDController {
@@ -13,7 +14,7 @@ pub struct LCDController {
 
 impl LCDController {
     pub fn show_image(&self, path: PathBuf) -> Result<()> {
-        let img = image::open(path)?;
+        let img = image::open(path.clone())?;
         let (width, height) = img.dimensions();
 
         // Calculate the buffer size in bytes (4 bytes per pixel for 32-bit ARGB/XRGB)
@@ -41,6 +42,8 @@ impl LCDController {
         }
 
         mmap.flush()?;
+
+        debug!("Displayed image: {:?}", path);
         Ok(())
     }
 

@@ -9,7 +9,7 @@ use crate::uart::packet::UARTPacket;
 pub const SYNC_BYTES: [u8; 2] = [0xFF, 0x55];
 pub const SYNC_LEN: usize = SYNC_BYTES.len();
 
-pub struct UART {
+pub struct Uart {
     _serial: Box<dyn SerialPort>,
     _buffer: Vec<u8>,
 
@@ -17,7 +17,7 @@ pub struct UART {
     _waiting_packet: bool,
 }
 
-impl UART {
+impl Uart {
     /// Open uart port by name/path
     pub fn open(name: impl Into<String> + Clone, baud_rate: u32) -> Result<Self> {
         let serial = serialport::new(name.clone().into(), baud_rate)

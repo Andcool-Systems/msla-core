@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use crate::{
     config::get_config,
-    uart::{UART, packet::UARTPacket, uart_client::UARTClient},
+    uart::{Uart, packet::UARTPacket, uart_client::UARTClient},
 };
 use anyhow::{Result, anyhow};
 
@@ -21,7 +21,7 @@ impl PeripheralController {
         let config = get_config().await;
 
         Ok(Self {
-            uart: UARTClient::new(UART::open(
+            uart: UARTClient::new(Uart::open(
                 config.peripheral.uart.clone(),
                 config.peripheral.baud_rate,
             )?)?,
@@ -103,11 +103,5 @@ impl PeripheralController {
             .await?;
 
         Ok(())
-    }
-}
-
-impl Drop for PeripheralController {
-    fn drop(&mut self) {
-        let _ = self.turn_uv(false);
     }
 }

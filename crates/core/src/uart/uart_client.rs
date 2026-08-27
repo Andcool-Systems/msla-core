@@ -1,4 +1,4 @@
-use crate::uart::{UART, UARTCommand, packet::UARTPacket};
+use crate::uart::{UARTCommand, Uart, packet::UARTPacket};
 use anyhow::{Result, anyhow};
 use std::{
     sync::{
@@ -23,12 +23,12 @@ pub struct UARTClient {
 
 impl UARTClient {
     /// Start polling to provided channel and from provided uart
-    pub fn spawn_uart(self: Arc<Self>, mut uart: UART) -> Result<()> {
+    pub fn spawn_uart(self: Arc<Self>, mut uart: Uart) -> Result<()> {
         let (sending_uarts_tx, sending_uarts_rx) = mpsc::channel::<UARTCommand>();
         self.clone()
             .writer
             .set(sending_uarts_tx)
-            .map_err(|e| anyhow!("Cannot init UART writer: {:?}", e))?;
+            .map_err(|e| anyhow!("Cannot init Uart writer: {:?}", e))?;
 
         let runtime = tokio::runtime::Handle::current();
 
@@ -55,7 +55,7 @@ impl UARTClient {
                     },
                     Ok(None) => continue,
                     Err(err) => {
-                        error!("Failed to read from UART: {err}");
+                        error!("Failed to read from Uart: {err}");
                         continue;
                     },
                 }
@@ -65,7 +65,7 @@ impl UARTClient {
         Ok(())
     }
 
-    pub fn new(uart: UART) -> Result<Arc<Self>> {
+    pub fn new(uart: Uart) -> Result<Arc<Self>> {
         let cl = Arc::new(Self {
             writer: OnceLock::new(),
             pending: Mutex::new(None),
@@ -91,7 +91,7 @@ impl UARTClient {
                 let mut pending = self.pending.lock().await;
 
                 if pending.is_some() {
-                    anyhow::bail!("UART is already waiting for response");
+                    anyhow::bail!("Uart is already waiting for response");
                 }
 
                 *pending = Some(tx);
@@ -101,7 +101,7 @@ impl UARTClient {
                 let w = self.writer.get();
                 let writer = w
                     .as_ref()
-                    .ok_or_else(|| anyhow::anyhow!("UART writer is not initialized"))?;
+                    .ok_or_else(|| anyhow::anyhow!("Uart writer is not initialized"))?;
 
                 writer.send(UARTCommand::Send(packet.clone()))?;
             }
@@ -110,7 +110,7 @@ impl UARTClient {
                 Ok(Ok(response)) => {
                     if response.packet_id != response_id {
                         anyhow::bail!(
-                            "Unexpected UART response: expected 0x{:02X}, got 0x{:02X}",
+                            "Unexpected Uart response: expected 0x{:02X}, got 0x{:02X}",
                             response_id,
                             response.packet_id
                         );
@@ -120,11 +120,11 @@ impl UARTClient {
                 },
 
                 Ok(Err(_)) => {
-                    anyhow::bail!("UART reader stopped");
+                    anyhow::bail!("Uart reader stopped");
                 },
 
                 Err(_) => {
-                    warn!("UART: timeout waiting for 0x{:02X}", response_id);
+                    warn!("Uart: timeout waiting for 0x{:02X}", response_id);
 
                     // Удаляем старый receiver.
                     self.pending.lock().await.take();
@@ -132,7 +132,7 @@ impl UARTClient {
             }
         }
 
-        anyhow::bail!("UART request timeout after {} retries", retries)
+        anyhow::bail!("Uart request timeout after {} retries", retries)
     }
 
     /// Receive the package and send it
