@@ -7,6 +7,8 @@ mod peripheral;
 mod types;
 mod uart;
 
+use std::env::args;
+
 use anyhow::Result;
 use tokio::time::sleep;
 use tracing::{Level, error, info};
@@ -17,6 +19,18 @@ use crate::{
     messaging::ir::{MetaIR, PrintingIR},
     peripheral::PeripheralController,
 };
+
+fn format_duration(total_seconds: u32) -> String {
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let seconds = total_seconds % 60;
+
+    match (hours, minutes) {
+        (h, _) if h > 0 => format!("{h}h {minutes}m {seconds}s"),
+        (_, m) if m > 0 => format!("{m}m {seconds}c"),
+        _ => format!("{seconds}c"),
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,8 +50,27 @@ async fn main() -> Result<()> {
         logging::str_to_log_level(&config.global.logging_level).unwrap_or(Level::INFO),
     );
 
+    let binding = args().collect::<Vec<String>>();
+
+    let model_name = match binding.get(1) {
+        Some(n) => n,
+        None => {
+            error!("Provide model to print");
+            std::process::exit(-1);
+        },
+    };
+
     let f = async || -> Result<()> {
-        let model = load_zip_model("model.zip").await?;
+        let model = load_zip_model(model_name).await?;
+
+        info!("Welcome to MSLA LCD!");
+        info!("Printing file: {}", model_name);
+        info!(
+            "Estimated printing time: {} ({} layers)",
+            format_duration(model.model_meta.estimated_printing_time),
+            model.model_meta.total_layer_count
+        );
+
         let controller = PeripheralController::new().await?;
         let lcd = LCDController::new()?;
 

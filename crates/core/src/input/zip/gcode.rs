@@ -1,10 +1,16 @@
-use std::{path::Path, str::SplitWhitespace, time::Duration};
+use std::{cmp::max, path::Path, str::SplitWhitespace, time::Duration};
 
 use crate::{
     messaging::ir::{MetaIR, PrintingIR},
     types::ir::GlobalPrintingMeta,
 };
 use anyhow::{Result, anyhow};
+
+macro_rules! try_parse_number {
+    ($n:ident, $ty:ty) => {
+        $n.parse::<$ty>().ok()
+    };
+}
 
 pub struct GCodeParser {
     pub ir: Vec<PrintingIR>,
@@ -148,29 +154,73 @@ impl GCodeParser {
     }
 
     /// Parse metadata from comments
-    fn parse_comment(&mut self, line: &str) {
-        let Some(res) = (match line.to_lowercase() {
-            l if l.starts_with("layer_start") => {
-                let l = l
-                    .replace("layer_start:", "")
-                    .parse::<u32>()
-                    .ok()
-                    .map(|n| PrintingIR::Meta(MetaIR::LayerStart(n)));
+    fn parse_comment(&mut self, line: &str) -> Option<()> {
+        let (comm, data) = line.split_once(':').unwrap_or((line, ""));
 
-                if let Some(PrintingIR::Meta(MetaIR::LayerStart(n))) = l {
-                    self.meta.total_layer_count = n;
-                }
+        let res = match comm.to_lowercase().as_str() {
+            "layer_start" => {
+                let n = try_parse_number!(data, u32)?;
 
-                l
+                // If reached layer with bigger index
+                self.meta.total_layer_count = max(self.meta.total_layer_count, n + 1);
+
+                PrintingIR::Meta(MetaIR::LayerStart(n))
             },
 
-            l if l.starts_with("layer_end") => Some(PrintingIR::Meta(MetaIR::LayerEnd)),
+            "layer_end" => PrintingIR::Meta(MetaIR::LayerEnd),
 
-            _ => None,
-        }) else {
-            return;
+            "estimatedprinttime" => {
+                if let Some(n) = try_parse_number!(data, u32) {
+                    self.meta.estimated_printing_time = n;
+                }
+
+                None?
+            },
+
+            "volume" => {
+                if let Some(n) = try_parse_number!(data, f32) {
+                    self.meta.volume = n;
+                }
+                None?
+            },
+
+            "filename" => {
+                self.meta.file_name = data.to_owned();
+                None?
+            },
+
+            "weight" => {
+                if let Some(n) = try_parse_number!(data, f32) {
+                    self.meta.weight = n;
+                }
+                None?
+            },
+
+            "price" => {
+                if let Some(n) = try_parse_number!(data, f32) {
+                    self.meta.price = n;
+                }
+                None?
+            },
+
+            "layerheight" => {
+                if let Some(n) = try_parse_number!(data, f32) {
+                    self.meta.layer_height = n;
+                }
+                None?
+            },
+
+            "totallayer" => {
+                if let Some(n) = try_parse_number!(data, u32) {
+                    self.meta.total_layer_count = max(self.meta.total_layer_count, n);
+                }
+                None?
+            },
+
+            _ => None?,
         };
 
         self.ir.push(res);
+        Some(())
     }
 }

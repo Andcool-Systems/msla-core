@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File, path::Path};
 mod gcode;
 
 use anyhow::{Result, anyhow};
@@ -20,11 +20,15 @@ pub async fn load_zip_model(zip_path: impl AsRef<std::path::Path>) -> Result<Mod
     let mut gparser = GCodeParser::new();
     gparser.parse_gcode(gcode)?;
 
+    let preview_path = temp_dir.path().join("preview.png");
+    let p = Path::new(&preview_path);
+    let preview = if p.exists() { Some(p) } else { None };
+
     Ok(Model {
         ir: gparser.ir,
         model_meta: gparser.meta,
         working_dir: temp_dir,
-        model_preview: None,
+        model_preview: preview.map(|x| x.to_path_buf()),
     })
 }
 
