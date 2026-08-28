@@ -1,24 +1,24 @@
 #[derive(Debug)]
 pub struct GlobalPrintingMeta {
-    pub file_name: String,
-    pub total_layer_count: u32,
-    pub estimated_printing_time: u32,
-    pub volume: f32,
-    pub weight: f32,
-    pub price: f32,
-    pub layer_height: f32,
+    pub file_name: Option<String>,
+    pub total_layer_count: Option<u32>,
+    pub estimated_printing_time: Option<u32>,
+    pub volume: Option<f32>,
+    pub weight: Option<f32>,
+    pub price: Option<f32>,
+    pub layer_height: Option<f32>,
 }
 
 impl GlobalPrintingMeta {
     pub fn new() -> Self {
         Self {
-            file_name: String::new(),
-            total_layer_count: 0,
-            estimated_printing_time: 0,
-            volume: 0.0,
-            weight: 0.0,
-            price: 0.0,
-            layer_height: 0.0,
+            file_name: None,
+            total_layer_count: None,
+            estimated_printing_time: None,
+            volume: None,
+            weight: None,
+            price: None,
+            layer_height: None,
         }
     }
 }

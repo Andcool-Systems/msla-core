@@ -134,93 +134,98 @@ impl GCodeParser {
     }
 
     /// Parse uv led power
-    fn parse_m106(&mut self, mut iter: SplitWhitespace) -> Option<()> {
-        let power = iter.find(|p| p.starts_with("S"))?;
-        self.ir.push(PrintingIR::TurnUV {
-            state: power.strip_prefix("S")?.parse::<f32>().ok()? > 0.0,
-        });
+    fn parse_m106(&mut self, mut iter: SplitWhitespace) -> bool {
+        let Some(power) = iter.find(|p| p.starts_with("S")) else {
+            return false;
+        };
 
-        Some(())
+        if let Some(power) = power
+            .strip_prefix("S")
+            .and_then(|power| power.parse::<f32>().ok())
+        {
+            self.ir.push(PrintingIR::TurnUV { state: power > 0.0 });
+        }
+
+        true
     }
 
     /// Show image
-    fn parse_m6054(&mut self, mut iter: SplitWhitespace) -> Option<()> {
-        let filename = iter.next()?;
+    fn parse_m6054(&mut self, mut iter: SplitWhitespace) -> bool {
+        let Some(filename) = iter.next() else {
+            return false;
+        };
         self.ir.push(PrintingIR::ShowImage(
             Path::new(&filename.trim_matches('"')).to_path_buf(),
         ));
 
-        Some(())
+        true
     }
 
     /// Parse metadata from comments
-    fn parse_comment(&mut self, line: &str) -> Option<()> {
+    fn parse_comment(&mut self, line: &str) -> bool {
         let (comm, data) = line.split_once(':').unwrap_or((line, ""));
 
-        let res = match comm.to_lowercase().as_str() {
+        match comm.trim().to_lowercase().as_str() {
             "layer_start" => {
-                let n = try_parse_number!(data, u32)?;
+                let Some(n) = try_parse_number!(data, u32) else {
+                    return false;
+                };
+                let ex = self.meta.total_layer_count.unwrap_or(0);
+                self.meta.total_layer_count = Some(max(ex, n + 1));
 
-                // If reached layer with bigger index
-                self.meta.total_layer_count = max(self.meta.total_layer_count, n + 1);
-
-                PrintingIR::Meta(MetaIR::LayerStart(n))
+                self.ir.push(PrintingIR::Meta(MetaIR::LayerStart(n)));
             },
 
-            "layer_end" => PrintingIR::Meta(MetaIR::LayerEnd),
+            "layer_end" => {
+                self.ir.push(PrintingIR::Meta(MetaIR::LayerEnd));
+            },
 
+            x => {
+                self.parse_metadata(&x, data);
+            },
+        }
+
+        true
+    }
+
+    /// Try parse meta from gcode file
+    fn parse_metadata(&mut self, key: &str, data: &str) -> bool {
+        match key {
             "estimatedprinttime" => {
-                if let Some(n) = try_parse_number!(data, u32) {
-                    self.meta.estimated_printing_time = n;
-                }
-
-                None?
+                self.meta.estimated_printing_time = try_parse_number!(data, u32);
             },
 
             "volume" => {
-                if let Some(n) = try_parse_number!(data, f32) {
-                    self.meta.volume = n;
-                }
-                None?
+                self.meta.volume = try_parse_number!(data, f32);
             },
 
             "filename" => {
-                self.meta.file_name = data.to_owned();
-                None?
+                self.meta.file_name = Some(data.to_owned());
             },
 
             "weight" => {
-                if let Some(n) = try_parse_number!(data, f32) {
-                    self.meta.weight = n;
-                }
-                None?
+                self.meta.weight = try_parse_number!(data, f32);
             },
 
             "price" => {
-                if let Some(n) = try_parse_number!(data, f32) {
-                    self.meta.price = n;
-                }
-                None?
+                self.meta.price = try_parse_number!(data, f32);
             },
 
             "layerheight" => {
-                if let Some(n) = try_parse_number!(data, f32) {
-                    self.meta.layer_height = n;
-                }
-                None?
+                self.meta.layer_height = try_parse_number!(data, f32);
             },
 
             "totallayer" => {
+                let ex = self.meta.total_layer_count.unwrap_or(0);
+
                 if let Some(n) = try_parse_number!(data, u32) {
-                    self.meta.total_layer_count = max(self.meta.total_layer_count, n);
+                    self.meta.total_layer_count = Some(max(ex, n));
                 }
-                None?
             },
 
-            _ => None?,
-        };
+            _ => {},
+        }
 
-        self.ir.push(res);
-        Some(())
+        true
     }
 }

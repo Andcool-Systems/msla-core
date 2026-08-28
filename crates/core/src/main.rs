@@ -63,12 +63,14 @@ async fn main() -> Result<()> {
     let f = async || -> Result<()> {
         let model = load_zip_model(model_name).await?;
 
+        println!("{:?}", model.model_meta);
+
         info!("Welcome to MSLA LCD!");
         info!("Printing file: {}", model_name);
         info!(
             "Estimated printing time: {} ({} layers)",
-            format_duration(model.model_meta.estimated_printing_time),
-            model.model_meta.total_layer_count
+            format_duration(model.model_meta.estimated_printing_time.unwrap_or_default()),
+            model.model_meta.total_layer_count.unwrap_or_default()
         );
 
         let controller = PeripheralController::new().await?;
@@ -103,8 +105,9 @@ async fn main() -> Result<()> {
                 PrintingIR::Meta(meta) => match meta {
                     MetaIR::LayerStart(n) => info!(
                         "------------------ Printing layer {} ({:.2}%) ------------------",
-                        n,
-                        (n as f64 / model.model_meta.total_layer_count as f64) * 100.0
+                        n + 1,
+                        ((n + 1) as f64 / model.model_meta.total_layer_count.unwrap_or(0) as f64)
+                            * 100.0
                     ),
                     MetaIR::LayerEnd => {
                         info!("------------------ Layer finished ------------------")
