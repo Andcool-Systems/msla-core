@@ -1,6 +1,6 @@
 use std::{path::PathBuf, time::Duration};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PrintingIR {
     Home,
 
@@ -15,8 +15,8 @@ pub enum PrintingIR {
     Meta(MetaIR),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MetaIR {
-    LayerStart(u32),
+    LayerStart(u64),
     LayerEnd,
 }

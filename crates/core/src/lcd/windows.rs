@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tracing::info;
 
 /// Windows LCD debug
+#[derive(Clone)]
 pub struct LCDController {}
 
 impl LCDController {

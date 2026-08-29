@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub struct GlobalPrintingMeta {
     pub file_name: Option<String>,
-    pub total_layer_count: Option<u32>,
+    pub total_layer_count: Option<u64>,
     pub estimated_printing_time: Option<u32>,
     pub volume: Option<f32>,
     pub weight: Option<f32>,

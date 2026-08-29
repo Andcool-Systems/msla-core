@@ -11,6 +11,7 @@ pub enum MovingZStatus {
     Unknown,
 }
 
+#[derive(Clone)]
 pub struct PeripheralController {
     uart: Arc<UARTClient>,
 }

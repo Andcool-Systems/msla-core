@@ -167,7 +167,7 @@ impl GCodeParser {
 
         match comm.trim().to_lowercase().as_str() {
             "layer_start" => {
-                let Some(n) = try_parse_number!(data, u32) else {
+                let Some(n) = try_parse_number!(data, u64) else {
                     return false;
                 };
                 let ex = self.meta.total_layer_count.unwrap_or(0);
@@ -181,7 +181,7 @@ impl GCodeParser {
             },
 
             x => {
-                self.parse_metadata(&x, data);
+                self.parse_metadata(x, data);
             },
         }
 
@@ -218,7 +218,7 @@ impl GCodeParser {
             "totallayer" => {
                 let ex = self.meta.total_layer_count.unwrap_or(0);
 
-                if let Some(n) = try_parse_number!(data, u32) {
+                if let Some(n) = try_parse_number!(data, u64) {
                     self.meta.total_layer_count = Some(max(ex, n));
                 }
             },

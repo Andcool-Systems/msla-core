@@ -4,15 +4,25 @@ use memmap2::MmapOptions;
 use std::{
     fs::{File, OpenOptions},
     path::PathBuf,
+    sync::Arc,
 };
 use tracing::debug;
 
 /// Printer LCD display controller
+#[derive(Clone)]
 pub struct LCDController {
-    fb: File,
+    fb: Arc<File>,
 }
 
 impl LCDController {
+    /// Create new LCD controller
+    pub fn new() -> Result<Self> {
+        let fb = Arc::new(OpenOptions::new().read(true).write(true).open("/dev/fb0")?);
+
+        Ok(Self { fb })
+    }
+
+    /// Send image into framebuffer
     pub fn show_image(&self, path: PathBuf) -> Result<()> {
         let img = image::open(path.clone())?;
         let (width, height) = img.dimensions();
@@ -20,7 +30,7 @@ impl LCDController {
         // Calculate the buffer size in bytes (4 bytes per pixel for 32-bit ARGB/XRGB)
         let fb_size = (width * height * 4) as usize;
 
-        let mut mmap = unsafe { MmapOptions::new().len(fb_size).map_mut(&self.fb)? };
+        let mut mmap = unsafe { MmapOptions::new().len(fb_size).map_mut(&*self.fb)? };
         let mut fb_index = 0;
 
         for (_x, _y, pixel) in img.pixels() {
@@ -45,11 +55,5 @@ impl LCDController {
 
         debug!("Displayed image: {:?}", path);
         Ok(())
-    }
-
-    pub fn new() -> Result<Self> {
-        let fb = OpenOptions::new().read(true).write(true).open("/dev/fb0")?;
-
-        Ok(Self { fb })
     }
 }
