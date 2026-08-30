@@ -9,7 +9,10 @@ use crate::{
     lcd::LCDController,
     messaging::ir::{MetaIR, PrintingIR},
     peripheral::PeripheralController,
-    types::printer_manager::{PrinterTaskCommand, PrinterTaskState, PrintingError},
+    types::{
+        peripheral::StepperPositioning,
+        printer_manager::{PrinterTaskCommand, PrinterTaskState, PrintingError},
+    },
 };
 
 /// Main printing task
@@ -85,7 +88,7 @@ impl PrinterTask {
             PrintingIR::MoveZ { pos, speed } => {
                 debug!("Move Z to {}mm, speed: {}mm/m", pos, speed);
                 self.peripheral_controller
-                    .move_z_to(pos, speed)
+                    .move_z_to(pos, speed, StepperPositioning::Absolute)
                     .await
                     .map_err(|e| PrintingError::new(format!("Cannot move Z axis: {e}")))?;
             },
@@ -161,6 +164,10 @@ impl PrinterTask {
     /// Stop or pause peripherals
     async fn shutdown_peripherals(&mut self) {
         let _ = self.peripheral_controller.turn_uv(false).await;
+        let _ = self
+            .peripheral_controller
+            .move_z_to(15f64, 45f64, StepperPositioning::Relative)
+            .await;
 
         // other code
     }

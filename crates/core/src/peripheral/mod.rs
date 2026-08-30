@@ -2,14 +2,10 @@ use std::{sync::Arc, time::Duration};
 
 use crate::{
     config::get_config,
+    types::peripheral::{MovingZStatus, StepperPositioning},
     uart::{Uart, packet::UARTPacket, uart_client::UARTClient},
 };
 use anyhow::{Result, anyhow};
-
-pub enum MovingZStatus {
-    Success,
-    Unknown,
-}
 
 #[derive(Clone)]
 pub struct PeripheralController {
@@ -37,11 +33,21 @@ impl PeripheralController {
     }
 
     /// Moves Z axis to a provided pos and with provided speed
-    pub async fn move_z_to(&self, pos: f64, speed: f64) -> Result<MovingZStatus> {
+    pub async fn move_z_to(
+        &self,
+        pos: f64,
+        speed: f64,
+        positioning: StepperPositioning,
+    ) -> Result<MovingZStatus> {
         let mut buf: Vec<u8> = Vec::new();
 
         buf.extend(pos.to_le_bytes());
         buf.extend(speed.to_le_bytes());
+
+        match positioning {
+            StepperPositioning::Absolute => buf.push(0),
+            StepperPositioning::Relative => buf.push(1),
+        }
 
         let mut packet = self
             .uart
