@@ -11,6 +11,7 @@ pub enum PrintingIR {
     Wait(Duration),
 
     DisableSteppers,
+    EnableSteppers,
 
     Meta(MetaIR),
 }

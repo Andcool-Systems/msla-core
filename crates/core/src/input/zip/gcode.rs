@@ -57,6 +57,9 @@ impl GCodeParser {
                 // absolute pos
                 "G90" => {},
 
+                // Enable steppers
+                "M17" => self.ir.push(PrintingIR::EnableSteppers),
+
                 // disable steppers
                 "M18" => self.ir.push(PrintingIR::DisableSteppers),
 

@@ -1,5 +1,8 @@
 use tokio::{
-    sync::{mpsc::Receiver, watch::Sender},
+    sync::{
+        mpsc::{Receiver, error::TryRecvError},
+        watch::Sender,
+    },
     time::sleep,
 };
 use tracing::{debug, error, info};
@@ -120,6 +123,14 @@ impl PrinterTask {
                     .map_err(|e| PrintingError::new(format!("Cannot disable steppers: {e}")))?;
             },
 
+            PrintingIR::EnableSteppers => {
+                info!("Enable steppers");
+                self.peripheral_controller
+                    .enable_steppers()
+                    .await
+                    .map_err(|e| PrintingError::new(format!("Cannot enable steppers: {e}")))?;
+            },
+
             PrintingIR::Meta(meta) => match meta {
                 MetaIR::LayerStart(n) => {
                     return Ok(Some(n));
@@ -141,8 +152,8 @@ impl PrinterTask {
 
     /// Receive external command
     async fn recv_command(&mut self) -> bool {
-        match self.command_receiver.recv().await {
-            Some(command) => match command {
+        match self.command_receiver.try_recv() {
+            Ok(command) => match command {
                 PrinterTaskCommand::Abort => return true,
                 PrinterTaskCommand::Pause => {
                     self.state = PrinterTaskState::Paused(self.current_layer);
@@ -152,9 +163,12 @@ impl PrinterTask {
                     self.state = PrinterTaskState::Printing(self.current_layer);
                 },
             },
-            None => {
-                error!("Printer Task has lost external control!");
-                return true;
+            Err(e) => match e {
+                TryRecvError::Empty => {},
+                TryRecvError::Disconnected => {
+                    error!("Printer Task has lost external control!");
+                    return true;
+                },
             },
         }
 
