@@ -109,11 +109,13 @@ impl UARTClient {
             match timeout(response_timeout, rx).await {
                 Ok(Ok(response)) => {
                     if response.packet_id != response_id {
-                        anyhow::bail!(
-                            "Unexpected Uart response: expected 0x{:02X}, got 0x{:02X}",
-                            response_id,
-                            response.packet_id
+                        warn!(
+                            "Uart: Received unexpected response_id: {} != {}",
+                            response.packet_id, response_id
                         );
+                        self.pending.lock().await.take();
+
+                        continue;
                     }
 
                     return Ok(response);
@@ -145,5 +147,10 @@ impl UARTClient {
         if let Some(tx) = tx {
             let _ = tx.send(packet);
         }
+    }
+
+    /// Resets all pending mutexes
+    pub async fn reset_client(&self) {
+        *(self.pending.lock().await) = None;
     }
 }

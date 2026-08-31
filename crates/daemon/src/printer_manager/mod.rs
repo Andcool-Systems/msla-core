@@ -93,7 +93,7 @@ impl PrinterManager {
                                 PrinterTaskState::Aborted => {
                                     info!("Print aborted");
                                     self.state = PrinterState::Aborted;
-                                    self.clear_print_task();
+                                    self.reset_state().await;
                                 }
 
                                  PrinterTaskState::Finished =>
@@ -102,7 +102,7 @@ impl PrinterManager {
                                 PrinterTaskState::Error(printing_error) => {
                                     error!("{}", printing_error);
                                     self.state = PrinterState::Error(printing_error);
-                                    self.clear_print_task();
+                                    self.reset_state().await;
                                 },
 
                             }
@@ -137,7 +137,8 @@ impl PrinterManager {
     }
 
     /// Clear all communications with print task
-    fn clear_print_task(&mut self) {
+    async fn reset_state(&mut self) {
+        self.peripheral_controller.uart.reset_client().await;
         self.print_task_command_transmitter = None;
         self.print_task_state_receiver = None;
     }

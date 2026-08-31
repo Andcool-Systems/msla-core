@@ -8,7 +8,7 @@ use std::{sync::Arc, time::Duration};
 
 #[derive(Clone)]
 pub struct PeripheralController {
-    uart: Arc<UARTClient>,
+    pub uart: Arc<UARTClient>,
 }
 
 impl PeripheralController {
