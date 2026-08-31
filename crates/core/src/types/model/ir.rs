@@ -1,4 +1,28 @@
-#[derive(Debug)]
+use std::{path::PathBuf, time::Duration};
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PrintingIR {
+    Home,
+
+    MoveZ { pos: f64, speed: f64 },
+    TurnUV { state: bool },
+
+    ShowImage(PathBuf),
+    Wait(Duration),
+
+    DisableSteppers,
+    EnableSteppers,
+
+    Meta(MetaIR),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum MetaIR {
+    LayerStart(u64),
+    LayerEnd,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct GlobalPrintingMeta {
     pub file_name: Option<String>,
     pub total_layer_count: Option<u64>,

@@ -1,11 +1,10 @@
-use std::{sync::Arc, time::Duration};
-
 use crate::{
     config::get_config,
-    types::peripheral::{MovingZStatus, StepperPositioning},
     uart::{Uart, packet::UARTPacket, uart_client::UARTClient},
 };
 use anyhow::{Result, anyhow};
+use msla_core::types::peripheral::{MovingZStatus, StepperPositioning};
+use std::{sync::Arc, time::Duration};
 
 #[derive(Clone)]
 pub struct PeripheralController {

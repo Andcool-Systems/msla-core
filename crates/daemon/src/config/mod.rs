@@ -1,5 +1,5 @@
-use crate::types::config::Config;
 use anyhow::{Result, anyhow};
+use msla_core::types::config::Config;
 use std::sync::OnceLock;
 use tokio::fs;
 

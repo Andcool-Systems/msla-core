@@ -1,17 +1,20 @@
 pub mod printer_task;
 
+use std::sync::Arc;
+
 use crate::{
-    input::Model,
-    lcd::LCDController,
-    peripheral::PeripheralController,
+    lcd::LCDController, peripheral::PeripheralController,
     printer_manager::printer_task::PrinterTask,
-    types::printer_manager::{PrinterCommand, PrinterState, PrinterTaskCommand, PrinterTaskState},
+};
+use msla_core::types::{
+    model::Model,
+    printer_manager::{PrinterCommand, PrinterState, PrinterTaskCommand, PrinterTaskState},
 };
 use tokio::sync::{
     mpsc::{self, Receiver, Sender},
     watch::{self, Receiver as ReceiverWatch, Sender as WatchSender},
 };
-use tracing::error;
+use tracing::{error, info};
 
 pub struct PrinterManager {
     /// Current printing state
@@ -57,7 +60,7 @@ impl PrinterManager {
                 Some(command) = self.command_receiver.recv() => {
                     match command {
                         PrinterCommand::StartPrint(model) => self.start_print(model),
-                        PrinterCommand::Abort => self.stop_print_task().await,
+                        PrinterCommand::Abort => self.send_to_print_task(PrinterTaskCommand::Abort).await,
                         _ => {},
                     }
                 }
@@ -78,20 +81,30 @@ impl PrinterManager {
                                 .clone();
 
                             match event {
-                                PrinterTaskState::Printing(n) =>
-                                    self.state = PrinterState::Printing { layer_no: n },
+                                PrinterTaskState::Printing(meta) =>
+                                    self.state = PrinterState::Printing(meta),
 
-                                PrinterTaskState::Paused(n) =>
-                                    self.state = PrinterState::Paused { layer_no: n },
+                                PrinterTaskState::Paused(meta) =>
+                                    self.state = PrinterState::Paused(meta),
 
                                 PrinterTaskState::Idle =>
                                     self.state = PrinterState::Idle,
 
+                                PrinterTaskState::Aborted => {
+                                    info!("Print aborted");
+                                    self.state = PrinterState::Aborted;
+                                    self.clear_print_task();
+                                }
+
+                                 PrinterTaskState::Finished =>
+                                    self.state = PrinterState::Finished,
+
                                 PrinterTaskState::Error(printing_error) => {
                                     error!("{}", printing_error);
                                     self.state = PrinterState::Error(printing_error);
-                                    self.stop_print_task().await;
+                                    self.clear_print_task();
                                 },
+
                             }
 
                             self.send_status().await;
@@ -108,7 +121,7 @@ impl PrinterManager {
     }
 
     /// Create Printer Task and start printing
-    fn start_print(&mut self, model: Model) {
+    fn start_print(&mut self, model: Arc<Model>) {
         let (command_tx, command_rx) = mpsc::channel::<PrinterTaskCommand>(128);
         let (state_tx, state_rx) = watch::channel(PrinterTaskState::Idle);
 
@@ -118,15 +131,13 @@ impl PrinterManager {
         let per = self.peripheral_controller.clone();
         let lcd = self.lcd_controller.clone();
         tokio::spawn(async move {
-            let mut task = PrinterTask::new(command_rx, state_tx, model, per, lcd);
-            task.run().await;
+            let mut task = PrinterTask::new(state_tx, model, per, lcd);
+            task.run(command_rx).await;
         });
     }
 
-    /// Stop and clear all communications with print task
-    async fn stop_print_task(&mut self) {
-        self.send_to_print_task(PrinterTaskCommand::Abort).await;
-
+    /// Clear all communications with print task
+    fn clear_print_task(&mut self) {
         self.print_task_command_transmitter = None;
         self.print_task_state_receiver = None;
     }

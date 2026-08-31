@@ -5,7 +5,7 @@
             "label": "Run Rust Project",
             "detail": "Run Rust application",
             "type": "shell",
-            "command": "cargo run --bin msla-core -- model.zip",
+            "command": "cargo run --bin msla-daemon -- model.zip",
             "args": [
             ],
             "group": {

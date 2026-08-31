@@ -15,3 +15,6 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(docsrs_dep)'] }
 anyhow = "1.0.104"
 serialport = { version = "4.9.0", default-features = false }
 tokio = { version = "1.53.1", features = ["full"] }
+serde = { version = "1.0.217", features = ["derive"] }
+tempfile = "3.27.0"
+serde_json = "1.0.138"

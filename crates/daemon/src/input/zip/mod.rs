@@ -1,15 +1,14 @@
-use std::{fs::File, path::Path};
+use std::{fs::File, path::Path, sync::Arc};
 mod gcode;
-
+use crate::input::zip::gcode::GCodeParser;
 use anyhow::{Result, anyhow};
+use msla_core::types::model::Model;
 use tempfile::{TempDir, tempdir};
 use tokio::fs;
 use zip::ZipArchive;
 
-use crate::input::{Model, zip::gcode::GCodeParser};
-
 /// Load zip model from file
-pub async fn load_zip_model(zip_path: impl AsRef<std::path::Path>) -> Result<Model> {
+pub async fn load_zip_model(zip_path: impl AsRef<std::path::Path>) -> Result<Arc<Model>> {
     let temp_dir = open_zip_temp(zip_path)?;
 
     let gcode_file = temp_dir.path().join("run.gcode");
@@ -24,12 +23,12 @@ pub async fn load_zip_model(zip_path: impl AsRef<std::path::Path>) -> Result<Mod
     let p = Path::new(&preview_path);
     let preview = if p.exists() { Some(p) } else { None };
 
-    Ok(Model {
+    Ok(Arc::new(Model {
         ir: gparser.ir,
         model_meta: gparser.meta,
-        working_dir: temp_dir,
+        working_dir: Arc::new(temp_dir),
         model_preview: preview.map(|x| x.to_path_buf()),
-    })
+    }))
 }
 
 /// Creates temp dir and extracts zip archive into it

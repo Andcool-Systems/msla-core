@@ -1,4 +1,5 @@
 pub mod config;
-pub mod ir;
+pub mod model;
 pub mod peripheral;
 pub mod printer_manager;
+pub mod rest;

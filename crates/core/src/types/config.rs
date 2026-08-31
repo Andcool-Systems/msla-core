@@ -7,6 +7,9 @@ pub struct Config {
 
     /// Peripheral ESP32 config
     pub peripheral: PeripheralConfig,
+
+    /// REST API config
+    pub rest_api: REST,
 }
 
 #[derive(Deserialize, Debug)]
@@ -20,4 +23,13 @@ pub struct PeripheralConfig {
     pub uart: String,
 
     pub baud_rate: u32,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct REST {
+    /// Server address
+    pub addr: String,
+
+    /// Server port
+    pub port: u16,
 }

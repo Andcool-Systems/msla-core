@@ -1,10 +1,6 @@
-use std::{cmp::max, path::Path, str::SplitWhitespace, time::Duration};
-
-use crate::{
-    messaging::ir::{MetaIR, PrintingIR},
-    types::ir::GlobalPrintingMeta,
-};
 use anyhow::{Result, anyhow};
+use msla_core::types::model::ir::{GlobalPrintingMeta, MetaIR, PrintingIR};
+use std::{cmp::max, path::Path, str::SplitWhitespace, time::Duration};
 
 macro_rules! try_parse_number {
     ($n:ident, $ty:ty) => {

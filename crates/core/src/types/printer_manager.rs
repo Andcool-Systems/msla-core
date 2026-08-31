@@ -1,28 +1,38 @@
+use crate::types::model::Model;
 use core::fmt;
-use std::error::Error;
-
-use crate::input::Model;
+use std::{error::Error, sync::Arc};
 
 /// Command for controlling printer manager
 pub enum PrinterCommand {
-    StartPrint(Model),
+    StartPrint(Arc<Model>),
     Pause,
     Resume,
     Abort,
 }
 
 /// Global printer state
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, Default)]
 pub enum PrinterState {
     #[default]
     Idle,
-    Printing {
-        layer_no: u64,
-    },
-    Paused {
-        layer_no: u64,
-    },
+    Printing(PrintingTaskMeta),
+    Paused(PrintingTaskMeta),
     Error(PrintingError),
+    Aborted,
+    Finished,
+}
+
+impl PrinterState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Idle => "idle",
+            Self::Printing(_) => "printing",
+            Self::Paused(_) => "paused",
+            Self::Error(_) => "error",
+            Self::Aborted => "aborted",
+            Self::Finished => "finished",
+        }
+    }
 }
 
 /// Outgoing commands for printer task
@@ -33,13 +43,31 @@ pub enum PrinterTaskCommand {
     Abort,
 }
 
+/// Current print state metadata
+#[derive(Clone, Debug)]
+pub struct PrintingTaskMeta {
+    pub printing_layer: u64,
+    pub model: Arc<Model>,
+}
+
+impl PrintingTaskMeta {
+    pub fn new(layer: u64, model: Arc<Model>) -> Self {
+        Self {
+            printing_layer: layer,
+            model,
+        }
+    }
+}
+
 /// State of current printing task
 #[derive(Clone, Debug)]
 pub enum PrinterTaskState {
     /// Printing layer #
-    Printing(u64),
+    Printing(PrintingTaskMeta),
+    Paused(PrintingTaskMeta),
     Error(PrintingError),
-    Paused(u64),
+    Aborted,
+    Finished,
     Idle,
 }
 
