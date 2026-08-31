@@ -46,15 +46,17 @@ pub enum PrinterTaskCommand {
 /// Current print state metadata
 #[derive(Clone, Debug)]
 pub struct PrintingTaskMeta {
-    pub printing_layer: u64,
+    pub printing_layer: usize,
+    pub current_ir_index: usize,
     pub model: Arc<Model>,
 }
 
 impl PrintingTaskMeta {
-    pub fn new(layer: u64, model: Arc<Model>) -> Self {
+    pub fn new(layer: usize, model: Arc<Model>, current_ir_index: usize) -> Self {
         Self {
             printing_layer: layer,
             model,
+            current_ir_index,
         }
     }
 }

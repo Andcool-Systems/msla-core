@@ -18,15 +18,15 @@ pub enum PrintingIR {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MetaIR {
-    LayerStart(u64),
+    LayerStart(usize),
     LayerEnd,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct GlobalPrintingMeta {
     pub file_name: Option<String>,
-    pub total_layer_count: Option<u64>,
-    pub estimated_printing_time: Option<u32>,
+    pub total_layer_count: Option<usize>,
+    pub estimated_printing_time: Option<usize>,
     pub volume: Option<f32>,
     pub weight: Option<f32>,
     pub price: Option<f32>,

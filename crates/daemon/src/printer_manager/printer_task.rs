@@ -12,14 +12,15 @@ use tokio::{
     sync::{mpsc::Receiver, watch::Sender},
     time::sleep,
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 use crate::{lcd::LCDController, peripheral::PeripheralController};
 
 /// Main printing task
 pub struct PrinterTask {
     printing_model: Arc<Model>,
-    current_layer: u64,
+    current_layer: usize,
+    current_ir_index: usize,
 
     state: PrinterTaskState,
 
@@ -43,21 +44,23 @@ impl PrinterTask {
             lcd_controller,
             state: PrinterTaskState::Idle,
             current_layer: 0,
+            current_ir_index: 0,
         }
     }
 
     pub async fn run(&mut self, mut command_receiver: Receiver<PrinterTaskCommand>) {
         self.state =
-            PrinterTaskState::Printing(PrintingTaskMeta::new(0, self.printing_model.clone()));
+            PrinterTaskState::Printing(PrintingTaskMeta::new(0, self.printing_model.clone(), 0));
 
         for i in 0..self.printing_model.ir.len() {
+            self.current_ir_index = i + 1;
             self.send_current_status().await;
 
             match self.state {
                 PrinterTaskState::Aborted | PrinterTaskState::Error(_) => return,
                 PrinterTaskState::Paused(_) => {
                     if !self.wait_to_resume(&mut command_receiver).await {
-                        self.shutdown_peripherals().await;
+                        self.shutdown_peripherals();
                         self.send_current_status().await;
                         return;
                     }
@@ -74,7 +77,8 @@ impl PrinterTask {
                             self.state = PrinterTaskState::Printing(
                                 PrintingTaskMeta::new(
                                     self.current_layer,
-                                    self.printing_model.clone()
+                                    self.printing_model.clone(),
+                                    self.current_ir_index
                                 )
                             );
                         }
@@ -137,12 +141,12 @@ impl PrinterTask {
             },
 
             PrintingIR::Wait(duration) => {
-                info!("Sleep {:?}", duration);
+                debug!("Sleep {:?}", duration);
                 sleep(duration).await;
             },
 
             PrintingIR::DisableSteppers => {
-                info!("Disable steppers");
+                debug!("Disable steppers");
                 self.peripheral_controller
                     .disable_steppers()
                     .await
@@ -150,7 +154,7 @@ impl PrinterTask {
             },
 
             PrintingIR::EnableSteppers => {
-                info!("Enable steppers");
+                debug!("Enable steppers");
                 self.peripheral_controller
                     .enable_steppers()
                     .await
@@ -159,7 +163,7 @@ impl PrinterTask {
 
             PrintingIR::Meta(meta) => match meta {
                 MetaIR::LayerStart(n) => {
-                    self.current_layer = n;
+                    self.current_layer = n + 1;
                 },
                 MetaIR::LayerEnd => {},
             },
@@ -177,12 +181,14 @@ impl PrinterTask {
     }
 
     /// Stop or pause peripherals
-    async fn shutdown_peripherals(&mut self) {
-        let _ = self.peripheral_controller.turn_uv(false).await;
-        let _ = self
-            .peripheral_controller
-            .move_z_to(15f64, 45f64, StepperPositioning::Relative)
-            .await;
+    fn shutdown_peripherals(&mut self) {
+        let peripheral_controller = self.peripheral_controller.clone();
+        tokio::spawn(async move {
+            let _ = peripheral_controller.turn_uv(false).await;
+            let _ = peripheral_controller
+                .move_z_to(15f64, 45f64, StepperPositioning::Relative)
+                .await;
+        });
 
         // other code
     }
@@ -199,6 +205,7 @@ impl PrinterTask {
                         self.state = PrinterTaskState::Printing(PrintingTaskMeta::new(
                             self.current_layer,
                             self.printing_model.clone(),
+                            self.current_ir_index,
                         ));
                         return true;
                     },
@@ -220,7 +227,7 @@ impl PrinterTask {
         match command {
             PrinterTaskCommand::Abort => {
                 self.state = PrinterTaskState::Aborted;
-                self.shutdown_peripherals().await;
+                self.shutdown_peripherals();
                 false
             },
 
@@ -228,6 +235,7 @@ impl PrinterTask {
                 self.state = PrinterTaskState::Paused(PrintingTaskMeta::new(
                     self.current_layer,
                     self.printing_model.clone(),
+                    self.current_ir_index,
                 ));
                 let _ = self.peripheral_controller.turn_uv(false).await;
                 true

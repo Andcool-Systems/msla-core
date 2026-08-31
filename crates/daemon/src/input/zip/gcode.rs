@@ -166,7 +166,7 @@ impl GCodeParser {
 
         match comm.trim().to_lowercase().as_str() {
             "layer_start" => {
-                let Some(n) = try_parse_number!(data, u64) else {
+                let Some(n) = try_parse_number!(data, usize) else {
                     return false;
                 };
                 let ex = self.meta.total_layer_count.unwrap_or(0);
@@ -191,7 +191,7 @@ impl GCodeParser {
     fn parse_metadata(&mut self, key: &str, data: &str) -> bool {
         match key {
             "estimatedprinttime" => {
-                self.meta.estimated_printing_time = try_parse_number!(data, u32);
+                self.meta.estimated_printing_time = try_parse_number!(data, usize);
             },
 
             "volume" => {
@@ -217,7 +217,7 @@ impl GCodeParser {
             "totallayer" => {
                 let ex = self.meta.total_layer_count.unwrap_or(0);
 
-                if let Some(n) = try_parse_number!(data, u64) {
+                if let Some(n) = try_parse_number!(data, usize) {
                     self.meta.total_layer_count = Some(max(ex, n));
                 }
             },

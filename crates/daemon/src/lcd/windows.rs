@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::path::PathBuf;
-use tracing::info;
+use tracing::debug;
 
 /// Windows LCD debug
 #[derive(Clone)]
@@ -14,7 +14,7 @@ impl LCDController {
 
     #[cfg(not(target_os = "linux"))]
     pub fn show_image(&self, path: PathBuf) -> Result<()> {
-        info!("Displaying layer {:?}", path);
+        debug!("Displaying layer {:?}", path);
         Ok(())
     }
 }

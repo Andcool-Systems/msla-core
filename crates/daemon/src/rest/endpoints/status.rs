@@ -30,6 +30,7 @@ pub async fn get_status(state: web::Data<RESTPrinterState>) -> impl Responder {
         PrinterState::Printing(meta) | PrinterState::Paused(meta) => {
             res.current_status = Some(json!({
                 "current_layer": meta.printing_layer,
+                "current_ir_index": meta.current_ir_index
             }));
 
             res.model_meta = Some(json!({
@@ -39,7 +40,9 @@ pub async fn get_status(state: web::Data<RESTPrinterState>) -> impl Responder {
                 "volume": meta.model.model_meta.volume,
                 "weight": meta.model.model_meta.weight,
                 "price": meta.model.model_meta.price,
-                "layer_height": meta.model.model_meta.price
+                "layer_height": meta.model.model_meta.price,
+
+                "ir_len": meta.model.ir.len()
             }))
         },
 
