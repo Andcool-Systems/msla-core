@@ -71,7 +71,7 @@ impl PrinterTask {
             let command = self.printing_model.ir[i].clone();
 
             tokio::select! {
-                result = self.execute_next_step(command) => {
+                result = self.execute_next_step(command.ir) => {
                     match result {
                         Ok(_) => {
                             self.state = PrinterTaskState::Printing(

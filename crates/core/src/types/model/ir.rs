@@ -1,5 +1,7 @@
 use std::{path::PathBuf, time::Duration};
 
+use crate::types::model::analyzer::Analyzer;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum PrintingIR {
     Home,
@@ -17,23 +19,11 @@ pub enum PrintingIR {
 }
 
 impl PrintingIR {
-    /// Calculate the approximate execution time of an IR command
-    pub fn get_approx_duration(&self) -> Duration {
-        match self {
-            // We cannot determine the homing time precisely, so we assume it to be zero.
-            PrintingIR::Home => Duration::ZERO,
-
-            PrintingIR::MoveZ { pos, speed } => Duration::from_secs_f64(pos / (speed / 60.0)),
-
-            PrintingIR::Wait(duration) => *duration,
-
-            // 500ms - Approx time of communication with peripheral, awaiting answer, etc.
-            PrintingIR::TurnUV { state: _ }
-            | PrintingIR::EnableSteppers
-            | PrintingIR::DisableSteppers
-            | PrintingIR::ShowImage(_) => Duration::from_millis(500),
-
-            PrintingIR::Meta(_) => Duration::ZERO,
+    /// Convert to timed ir
+    pub fn to_timed_ir(&self) -> TimedIR {
+        TimedIR {
+            ir: self.clone(),
+            estimated_remaining: Duration::default(),
         }
     }
 }
@@ -42,4 +32,11 @@ impl PrintingIR {
 pub enum MetaIR {
     LayerStart(usize),
     LayerEnd,
+}
+
+/// Timed IR contains an estimated remaining time to print finish
+#[derive(Clone, Debug)]
+pub struct TimedIR {
+    pub ir: PrintingIR,
+    pub estimated_remaining: Duration,
 }

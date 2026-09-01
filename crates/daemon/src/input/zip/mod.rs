@@ -23,12 +23,12 @@ pub async fn load_zip_model(zip_path: impl AsRef<std::path::Path>) -> Result<Arc
     let p = Path::new(&preview_path);
     let preview = if p.exists() { Some(p) } else { None };
 
-    Ok(Arc::new(Model {
-        ir: gparser.ir,
-        model_meta: gparser.meta,
-        working_dir: Arc::new(temp_dir),
-        model_preview: preview.map(|x| x.to_path_buf()),
-    }))
+    Ok(Arc::new(Model::new(
+        gparser.ir,
+        gparser.meta,
+        Arc::new(temp_dir),
+        preview.map(|x| x.to_path_buf()),
+    )))
 }
 
 /// Creates temp dir and extracts zip archive into it

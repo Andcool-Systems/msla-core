@@ -1,5 +1,8 @@
 use anyhow::{Result, anyhow};
-use msla_core::types::model::{GlobalPrintingMeta, ir::{MetaIR, PrintingIR}};
+use msla_core::types::model::{
+    GlobalPrintingMeta,
+    ir::{MetaIR, PrintingIR, TimedIR},
+};
 use std::{cmp::max, path::Path, str::SplitWhitespace, time::Duration};
 
 macro_rules! try_parse_number {
@@ -9,7 +12,7 @@ macro_rules! try_parse_number {
 }
 
 pub struct GCodeParser {
-    pub ir: Vec<PrintingIR>,
+    pub ir: Vec<TimedIR>,
     pub meta: GlobalPrintingMeta,
 }
 
@@ -48,16 +51,16 @@ impl GCodeParser {
                 "G21" => {},
 
                 // homing
-                "G28" => self.ir.push(PrintingIR::Home),
+                "G28" => self.ir.push(PrintingIR::Home.to_timed_ir()),
 
                 // absolute pos
                 "G90" => {},
 
                 // Enable steppers
-                "M17" => self.ir.push(PrintingIR::EnableSteppers),
+                "M17" => self.ir.push(PrintingIR::EnableSteppers.to_timed_ir()),
 
                 // disable steppers
-                "M18" => self.ir.push(PrintingIR::DisableSteppers),
+                "M18" => self.ir.push(PrintingIR::DisableSteppers.to_timed_ir()),
 
                 // UV power
                 "M106" => {
@@ -106,10 +109,13 @@ impl GCodeParser {
         // If no Z-axis command is found in the current G-code, skip it
         let Some(pos) = z_pos else { return };
 
-        self.ir.push(PrintingIR::MoveZ {
-            pos,
-            speed: z_speed.unwrap_or(50.0),
-        })
+        self.ir.push(
+            PrintingIR::MoveZ {
+                pos,
+                speed: z_speed.unwrap_or(50.0),
+            }
+            .to_timed_ir(),
+        )
     }
 
     /// Parse dwell
@@ -126,7 +132,7 @@ impl GCodeParser {
         };
 
         if !duration.is_zero() {
-            self.ir.push(PrintingIR::Wait(duration));
+            self.ir.push(PrintingIR::Wait(duration).to_timed_ir());
         }
 
         Ok(())
@@ -142,7 +148,8 @@ impl GCodeParser {
             .strip_prefix("S")
             .and_then(|power| power.parse::<f32>().ok())
         {
-            self.ir.push(PrintingIR::TurnUV { state: power > 0.0 });
+            self.ir
+                .push(PrintingIR::TurnUV { state: power > 0.0 }.to_timed_ir());
         }
 
         true
@@ -153,9 +160,10 @@ impl GCodeParser {
         let Some(filename) = iter.next() else {
             return false;
         };
-        self.ir.push(PrintingIR::ShowImage(
-            Path::new(&filename.trim_matches('"')).to_path_buf(),
-        ));
+        self.ir.push(
+            PrintingIR::ShowImage(Path::new(&filename.trim_matches('"')).to_path_buf())
+                .to_timed_ir(),
+        );
 
         true
     }
@@ -172,11 +180,13 @@ impl GCodeParser {
                 let ex = self.meta.total_layer_count.unwrap_or(0);
                 self.meta.total_layer_count = Some(max(ex, n + 1));
 
-                self.ir.push(PrintingIR::Meta(MetaIR::LayerStart(n)));
+                self.ir
+                    .push(PrintingIR::Meta(MetaIR::LayerStart(n)).to_timed_ir());
             },
 
             "layer_end" => {
-                self.ir.push(PrintingIR::Meta(MetaIR::LayerEnd));
+                self.ir
+                    .push(PrintingIR::Meta(MetaIR::LayerEnd).to_timed_ir());
             },
 
             x => {
