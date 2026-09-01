@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow};
-use msla_core::types::model::ir::{GlobalPrintingMeta, MetaIR, PrintingIR};
+use msla_core::types::model::{GlobalPrintingMeta, ir::{MetaIR, PrintingIR}};
 use std::{cmp::max, path::Path, str::SplitWhitespace, time::Duration};
 
 macro_rules! try_parse_number {
@@ -17,7 +17,7 @@ impl GCodeParser {
     pub fn new() -> Self {
         Self {
             ir: Vec::new(),
-            meta: GlobalPrintingMeta::new(),
+            meta: GlobalPrintingMeta::default(),
         }
     }
 

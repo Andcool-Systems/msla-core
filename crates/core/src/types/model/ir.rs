@@ -16,33 +16,30 @@ pub enum PrintingIR {
     Meta(MetaIR),
 }
 
+impl PrintingIR {
+    /// Calculate the approximate execution time of an IR command
+    pub fn get_approx_duration(&self) -> Duration {
+        match self {
+            // We cannot determine the homing time precisely, so we assume it to be zero.
+            PrintingIR::Home => Duration::ZERO,
+
+            PrintingIR::MoveZ { pos, speed } => Duration::from_secs_f64(pos / (speed / 60.0)),
+
+            PrintingIR::Wait(duration) => *duration,
+
+            // 500ms - Approx time of communication with peripheral, awaiting answer, etc.
+            PrintingIR::TurnUV { state: _ }
+            | PrintingIR::EnableSteppers
+            | PrintingIR::DisableSteppers
+            | PrintingIR::ShowImage(_) => Duration::from_millis(500),
+
+            PrintingIR::Meta(_) => Duration::ZERO,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum MetaIR {
     LayerStart(usize),
     LayerEnd,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct GlobalPrintingMeta {
-    pub file_name: Option<String>,
-    pub total_layer_count: Option<usize>,
-    pub estimated_printing_time: Option<usize>,
-    pub volume: Option<f32>,
-    pub weight: Option<f32>,
-    pub price: Option<f32>,
-    pub layer_height: Option<f32>,
-}
-
-impl GlobalPrintingMeta {
-    pub fn new() -> Self {
-        Self {
-            file_name: None,
-            total_layer_count: None,
-            estimated_printing_time: None,
-            volume: None,
-            weight: None,
-            price: None,
-            layer_height: None,
-        }
-    }
 }
