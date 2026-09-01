@@ -53,7 +53,7 @@ impl PrinterTask {
             PrinterTaskState::Printing(PrintingTaskMeta::new(0, self.printing_model.clone(), 0));
 
         for i in 0..self.printing_model.ir.len() {
-            self.current_ir_index = i + 1;
+            self.current_ir_index = i;
             self.send_current_status().await;
 
             match self.state {
