@@ -8,6 +8,8 @@ pub enum PrinterCommand {
     Pause,
     Resume,
     Abort,
+    Home,
+    DisableStepper,
 }
 
 /// Global printer state

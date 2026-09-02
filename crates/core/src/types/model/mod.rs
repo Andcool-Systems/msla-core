@@ -1,10 +1,5 @@
 use crate::types::model::{analyzer::Analyzer, ir::TimedIR};
-use std::{
-    ops::{Add, AddAssign},
-    path::PathBuf,
-    sync::Arc,
-    time::Duration,
-};
+use std::{path::PathBuf, sync::Arc};
 use tempfile::TempDir;
 pub mod analyzer;
 pub mod ir;

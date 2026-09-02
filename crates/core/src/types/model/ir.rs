@@ -1,7 +1,5 @@
 use std::{path::PathBuf, time::Duration};
 
-use crate::types::model::analyzer::Analyzer;
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum PrintingIR {
     Home,

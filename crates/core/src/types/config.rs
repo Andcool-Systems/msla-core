@@ -32,4 +32,7 @@ pub struct REST {
 
     /// Server port
     pub port: u16,
+
+    /// Server White IP
+    pub external_addr: String,
 }

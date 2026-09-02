@@ -56,3 +56,40 @@ pub async fn start_print(
             .json(json!({"message": format!("Cannot send command to daemon: {}", e)})),
     }
 }
+
+#[post("/home")]
+pub async fn home(state: web::Data<RESTPrinterState>) -> impl Responder {
+    match state.state.borrow().clone() {
+        PrinterState::Printing(_) | PrinterState::Paused(_) => {
+            return HttpResponse::BadRequest().json(json!({"message": "Printer is printing now!"}));
+        },
+
+        _ => {},
+    };
+
+    match state.command_tx.send(PrinterCommand::Home).await {
+        Ok(_) => HttpResponse::Created().json(json!({"message": "Home task signal sent"})),
+        Err(_) => {
+            HttpResponse::InternalServerError().json(json!({"message": "Cannot send home signal"}))
+        },
+    }
+}
+
+#[post("/disable-stepper")]
+pub async fn dis_stepper(state: web::Data<RESTPrinterState>) -> impl Responder {
+    match state.state.borrow().clone() {
+        PrinterState::Printing(_) | PrinterState::Paused(_) => {
+            return HttpResponse::BadRequest().json(json!({"message": "Printer is printing now!"}));
+        },
+
+        _ => {},
+    };
+
+    match state.command_tx.send(PrinterCommand::DisableStepper).await {
+        Ok(_) => {
+            HttpResponse::Created().json(json!({"message": "Disable stepper task signal sent"}))
+        },
+        Err(_) => HttpResponse::InternalServerError()
+            .json(json!({"message": "Cannot send disable stepper signal"})),
+    }
+}

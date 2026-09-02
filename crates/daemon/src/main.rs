@@ -1,7 +1,5 @@
-mod config;
 mod input;
 mod lcd;
-mod logging;
 mod peripheral;
 mod printer_manager;
 mod rest;
@@ -10,17 +8,51 @@ mod uart;
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
     str::FromStr,
+    sync::Arc,
 };
 
 use anyhow::Result;
-use msla_core::types::printer_manager::{PrinterCommand, PrinterState};
-use tokio::sync::{mpsc, watch};
-use tracing::{Level, error};
+use msla_core::{
+    config, logging, types::printer_manager::{PrinterCommand, PrinterState},
+};
+use tokio::sync::{Notify, mpsc, watch};
+use tracing::{Level, error, info};
 
 use crate::{
     lcd::LCDController, peripheral::PeripheralController, printer_manager::PrinterManager,
     rest::build_rest_api,
 };
+
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+
+        let mut sigterm =
+            signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+
+        let mut sigint = signal(SignalKind::interrupt()).expect("failed to install SIGINT handler");
+
+        tokio::select! {
+            _ = sigterm.recv() => {
+                info!("SIGTERM received");
+            }
+
+            _ = sigint.recv() => {
+                info!("SIGINT received");
+            }
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to listen for Ctrl+C");
+
+        info!("Ctrl+C received");
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -66,10 +98,28 @@ async fn main() -> Result<()> {
 
     tokio::spawn(rest);
 
+    // Some graceful shutdown things
+    let shutdown_notify = Arc::new(Notify::new());
+
+    // Graceful shutdown notifier task
+    tokio::spawn({
+        let shutdown_notify = shutdown_notify.clone();
+
+        async move {
+            shutdown_signal().await;
+            shutdown_notify.notify_one();
+        }
+    });
+
     // Create printer manager instance and run it
     let mut printer =
         PrinterManager::new(command_rx, state_tx, peripheral_controller, lcd_controller);
-    printer.run().await;
 
+    tokio::select! {
+        _ = printer.run() => {},
+        _ = shutdown_notify.notified() => {
+            info!("Shutting down the server...");
+        }
+    }
     Ok(())
 }

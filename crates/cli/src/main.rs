@@ -1,27 +1,33 @@
-use indicatif::{ProgressBar, ProgressStyle};
-use std::time::Duration;
+use crate::status::show_status;
+use anyhow::Result;
+use clap::Parser;
+use msla_core::{
+    config, logging,
+    types::cli::args::{Args, Command},
+};
+use tracing::error;
+mod api;
+mod status;
 
 #[tokio::main]
-async fn main() {
-    let total_layers = 245;
-    let pb = ProgressBar::new(total_layers);
+async fn main() -> Result<()> {
+    logging::init_logger(tracing::Level::INFO);
+    config::load("config.toml").await.map_err(|e| {
+        error!("{}", e);
+        std::process::exit(-1);
+    });
 
-    pb.set_style(
-        ProgressStyle::with_template(
-            "Printing [{bar:50}] {percent}%\n\
-             Layer: {pos}/{len}\n\
-             Time: {elapsed_precise}\n\
-             ETA: {eta_precise}",
-        )
-        .unwrap()
-        .progress_chars("=> "),
-    );
+    let args = Args::parse();
 
-    for layer in 0..total_layers {
-        tokio::time::sleep(Duration::from_millis(100)).await;
-
-        pb.set_position(layer + 1);
+    match args.command {
+        Command::Start(start_args) => todo!(),
+        Command::Abort => todo!(),
+        Command::Pause => todo!(),
+        Command::Resume => todo!(),
+        Command::Status(status_args) => {
+            show_status(status_args.watch, status_args.period.unwrap_or(10)).await?;
+        },
     }
 
-    pb.finish_with_message("Printing finished!");
+    Ok(())
 }

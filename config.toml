@@ -2,9 +2,11 @@
 logging_level = "debug"
 
 [peripheral]
-uart = "COM3"
+uart = "COM9"
 baud_rate = 115200
 
 [rest_api]
 addr = "0.0.0.0"
 port = 709
+
+external_addr = "192.168.0.185"

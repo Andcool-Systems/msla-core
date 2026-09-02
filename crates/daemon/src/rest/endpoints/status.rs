@@ -48,8 +48,7 @@ pub async fn get_status(state: web::Data<RESTPrinterState>) -> impl Responder {
                 "volume": meta.model.model_meta.volume,
                 "weight": meta.model.model_meta.weight,
                 "price": meta.model.model_meta.price,
-                "layer_height": meta.model.model_meta.price,
-
+                "layer_height": meta.model.model_meta.layer_height,
                 "ir_len": meta.model.ir.len()
             }))
         },

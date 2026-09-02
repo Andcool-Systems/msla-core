@@ -61,7 +61,14 @@ impl PrinterManager {
                     match command {
                         PrinterCommand::StartPrint(model) => self.start_print(model),
                         PrinterCommand::Abort => self.send_to_print_task(PrinterTaskCommand::Abort).await,
-                        _ => {},
+                        PrinterCommand::Pause => self.send_to_print_task(PrinterTaskCommand::Pause).await,
+                        PrinterCommand::Resume => self.send_to_print_task(PrinterTaskCommand::Resume).await,
+                        PrinterCommand::Home => {
+                            let _ = self.peripheral_controller.home_z().await;
+                        },
+                        PrinterCommand::DisableStepper => {
+                            let _ = self.peripheral_controller.disable_steppers().await;
+                        },
                     }
                 }
 

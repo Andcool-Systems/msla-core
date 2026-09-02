@@ -1,5 +1,5 @@
 use crate::rest::endpoints::{
-    controls::{abort_print, start_print},
+    controls::{abort_print, dis_stepper, home, start_print},
     status::{get_preview, get_status},
 };
 use actix_web::{App, HttpServer, dev::Server, web};
@@ -30,6 +30,8 @@ pub fn build_rest_api(
             .service(abort_print)
             .service(start_print)
             .service(get_preview)
+            .service(home)
+            .service(dis_stepper)
     };
 
     Ok(HttpServer::new(app).bind(addr)?.run())
