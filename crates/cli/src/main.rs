@@ -1,10 +1,11 @@
-use crate::{search::execute_search, status::show_status};
+use crate::{api::start_local_print, search::execute_search, status::show_status};
 use anyhow::Result;
 use clap::Parser;
 use msla_core::{
     config, logging,
     types::cli::args::{Args, Command},
 };
+use std::path::PathBuf;
 use tracing::error;
 mod api;
 mod search;
@@ -21,7 +22,10 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     match args.command {
-        Command::Start(start_args) => todo!(),
+        Command::Start(start_args) => {
+            // TODO: Переписать это
+            start_local_print(start_args.local.map(PathBuf::from).unwrap_or_default()).await?;
+        },
         Command::Abort => todo!(),
         Command::Pause => todo!(),
         Command::Resume => todo!(),
