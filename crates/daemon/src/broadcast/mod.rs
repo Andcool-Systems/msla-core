@@ -19,6 +19,8 @@ pub async fn start_broadcast() -> Result<()> {
         let (len, addr) = socket.recv_from(&mut buf).await?;
         let packet = &buf[..len];
 
+        println!("rec: {:?}", packet);
+
         if packet.len() < 3 {
             continue;
         }

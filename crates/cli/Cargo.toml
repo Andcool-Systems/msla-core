@@ -18,3 +18,4 @@ tracing-subscriber =  {workspace = true}
 serde = {workspace = true}
 serde_json = {workspace = true}
 colored = "3.0.0"
+if-addrs = "0.13"

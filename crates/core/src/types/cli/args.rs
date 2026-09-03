@@ -44,6 +44,9 @@ pub struct StatusArgs {
 pub struct SearchArgs {
     #[arg(long)]
     pub interval: Option<u64>,
+
+    #[arg(long)]
+    pub alt: bool,
 }
 
 #[derive(Parser, Debug)]

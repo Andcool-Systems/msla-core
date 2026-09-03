@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
             show_status(status_args.watch, status_args.period.unwrap_or(10)).await?;
         },
         Command::Search(search_args) => {
-            execute_search(search_args.interval.unwrap_or(2)).await?;
+            execute_search(search_args.interval.unwrap_or(2), search_args.alt).await?;
         },
     }
 
