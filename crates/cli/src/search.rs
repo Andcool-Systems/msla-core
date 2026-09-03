@@ -20,7 +20,7 @@ pub async fn execute_search(interval: u64) -> Result<()> {
     socket
         .send_to(
             &packet,
-            format!("192.168.0.255:{}", config.broadcast_listener.port),
+            format!("255.255.255.255:{}", config.broadcast_listener.port),
         )
         .await?;
     let mut buf = [0u8; 1500];
