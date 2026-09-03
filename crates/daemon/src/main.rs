@@ -1,3 +1,4 @@
+mod broadcast;
 mod input;
 mod lcd;
 mod peripheral;
@@ -13,14 +14,15 @@ use std::{
 
 use anyhow::Result;
 use msla_core::{
-    config, logging, types::printer_manager::{PrinterCommand, PrinterState},
+    config, logging,
+    types::printer_manager::{PrinterCommand, PrinterState},
 };
 use tokio::sync::{Notify, mpsc, watch};
 use tracing::{Level, error, info};
 
 use crate::{
-    lcd::LCDController, peripheral::PeripheralController, printer_manager::PrinterManager,
-    rest::build_rest_api,
+    broadcast::start_broadcast, lcd::LCDController, peripheral::PeripheralController,
+    printer_manager::PrinterManager, rest::build_rest_api,
 };
 
 async fn shutdown_signal() {
@@ -97,6 +99,9 @@ async fn main() -> Result<()> {
     )?;
 
     tokio::spawn(rest);
+
+    // Start broadcast server
+    tokio::spawn(async { start_broadcast().await });
 
     // Some graceful shutdown things
     let shutdown_notify = Arc::new(Notify::new());

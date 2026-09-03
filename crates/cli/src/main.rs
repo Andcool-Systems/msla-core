@@ -1,4 +1,4 @@
-use crate::status::show_status;
+use crate::{search::execute_search, status::show_status};
 use anyhow::Result;
 use clap::Parser;
 use msla_core::{
@@ -7,6 +7,7 @@ use msla_core::{
 };
 use tracing::error;
 mod api;
+mod search;
 mod status;
 
 #[tokio::main]
@@ -26,6 +27,9 @@ async fn main() -> Result<()> {
         Command::Resume => todo!(),
         Command::Status(status_args) => {
             show_status(status_args.watch, status_args.period.unwrap_or(10)).await?;
+        },
+        Command::Search(search_args) => {
+            execute_search(search_args.interval.unwrap_or(2)).await?;
         },
     }
 

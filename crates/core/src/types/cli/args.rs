@@ -12,6 +12,7 @@ pub enum Command {
     Resume,
 
     Status(StatusArgs),
+    Search(SearchArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -37,6 +38,12 @@ pub struct StatusArgs {
 
     #[arg(long)]
     pub period: Option<u64>,
+}
+
+#[derive(Parser, Debug)]
+pub struct SearchArgs {
+    #[arg(long)]
+    pub interval: Option<u64>,
 }
 
 #[derive(Parser, Debug)]

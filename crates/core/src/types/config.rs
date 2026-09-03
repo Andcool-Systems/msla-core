@@ -10,6 +10,9 @@ pub struct Config {
 
     /// REST API config
     pub rest_api: REST,
+
+    /// Broadcast listener
+    pub broadcast_listener: BroadcastListener,
 }
 
 #[derive(Deserialize, Debug)]
@@ -35,4 +38,13 @@ pub struct REST {
 
     /// Server White IP
     pub external_addr: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct BroadcastListener {
+    /// bc address
+    pub addr: String,
+
+    /// bc port
+    pub port: u16,
 }

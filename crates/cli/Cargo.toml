@@ -11,7 +11,7 @@ msla-core = { path = "../core"}
 anyhow = {workspace = true}
 tokio = {workspace = true}
 indicatif = "0.18.6"
-reqwest = "0.12.12"
+reqwest = {version = "0.12.12", features = ["native-tls", "native-tls-vendored"]}
 clap = {workspace = true}
 tracing = {workspace = true}
 tracing-subscriber =  {workspace = true}
