@@ -91,8 +91,6 @@ pub async fn execute_search(interval: u64, alt: bool) -> Result<()> {
                 config.broadcast_listener.port,
             );
 
-            println!("Scan {}", addr);
-
             socket.send_to(&packet, addr).await?;
         }
     } else {
