@@ -36,6 +36,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
     let duration = Duration::from_secs(period);
     let mut status: StatusResponse = api_client.get_status().await?;
     let mut estimated = 0f64;
+    let mut last_ir_index = 0;
     let mut updated = false;
 
     pb.set_style(
@@ -72,7 +73,12 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                         .unwrap()
                         .progress_chars("=> "),
                     );
-                    estimated = current_status.estimated_finish_time;
+
+                    // If printer executing new ir
+                    if current_status.current_ir_index != last_ir_index {
+                        estimated = current_status.estimated_finish_time;
+                        last_ir_index = current_status.current_ir_index;
+                    }
                 }
 
                 let percent =

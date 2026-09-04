@@ -2,6 +2,8 @@
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 250,
     "cSpell.words": [
+        "addrs",
+        "iface",
         "microsteps",
         "msla",
         "oneshot",
