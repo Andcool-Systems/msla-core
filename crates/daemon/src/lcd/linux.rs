@@ -37,11 +37,7 @@ impl LCDController {
             let channels = pixel.0;
             let luma = channels[0];
 
-            let color_val: u32 = if luma > 127 {
-                0xFFFFFFFF // White
-            } else {
-                0xFF000000 // Black
-            };
+            let color_val = u32::from_be_bytes([255, luma, luma, luma]);
 
             let byte_offset = fb_index * 4;
             if byte_offset + 3 < mmap.len() {

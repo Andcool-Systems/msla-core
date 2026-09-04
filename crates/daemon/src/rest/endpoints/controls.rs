@@ -1,12 +1,14 @@
+use std::path::PathBuf;
+
+use crate::input::zip::load_zip_model;
+use actix_multipart::form::text::Text;
+use actix_multipart::form::{MultipartForm, tempfile::TempFile};
 use actix_web::{HttpResponse, Responder, post, web};
 use msla_core::types::{
     printer_manager::{PrinterCommand, PrinterState},
     rest::RESTPrinterState,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::json;
-
-use crate::input::zip::load_zip_model;
 
 #[post("/abort")]
 pub async fn abort_print(state: web::Data<RESTPrinterState>) -> impl Responder {
@@ -18,25 +20,21 @@ pub async fn abort_print(state: web::Data<RESTPrinterState>) -> impl Responder {
     }
 }
 
-#[derive(Deserialize, Serialize)]
-struct StartLocalPrint {
-    path: String,
+#[derive(Debug, MultipartForm)]
+struct UploadForm {
+    #[multipart(limit = "100MB")]
+    file: Option<TempFile>,
+
+    local_file: Option<Text<String>>,
 }
 
 /// Starting a new zip print from local file
-#[post("/start/zip/local")]
+#[post("/start/{f_type}/{placing}")]
 pub async fn start_print(
+    path: web::Path<(String, String)>,
     state: web::Data<RESTPrinterState>,
-    body: web::Json<StartLocalPrint>,
+    MultipartForm(form): MultipartForm<UploadForm>,
 ) -> impl Responder {
-    let model = match load_zip_model(body.path.clone()).await {
-        Ok(m) => m,
-        Err(e) => {
-            return HttpResponse::BadRequest()
-                .json(json!({"message": format!("Cannot load .zip model: {}", e)}));
-        },
-    };
-
     match state.state.borrow().clone() {
         PrinterState::Printing(_) | PrinterState::Paused(_) => {
             return HttpResponse::Conflict().json(
@@ -45,6 +43,40 @@ pub async fn start_print(
         },
         _ => {},
     }
+
+    let mut file_handler = None;
+    let file = match path.1.as_str() {
+        "remote" => {
+            let Some(file) = form.file else {
+                return HttpResponse::BadRequest()
+                    .json(json!({"message": "You need to pass a file"}));
+            };
+
+            let p = file.file.path().to_path_buf();
+            file_handler = Some(file);
+            p
+        },
+        "local" => {
+            let Some(path) = form.local_file else {
+                return HttpResponse::BadRequest()
+                    .json(json!({"message": "You need to specify file path"}));
+            };
+            PathBuf::from(path.0)
+        },
+        _ => return HttpResponse::BadRequest().json(json!({"message": "Invalid placing"})),
+    };
+
+    let model = match path.0.as_str() {
+        "zip" => match load_zip_model(file).await {
+            Ok(m) => m,
+            Err(e) => {
+                return HttpResponse::BadRequest().json(json!({"message": format!("{}", e)}));
+            },
+        },
+        _ => return HttpResponse::BadRequest().json(json!({"message": "Unknown file format"})),
+    };
+
+    drop(file_handler);
 
     match state
         .command_tx

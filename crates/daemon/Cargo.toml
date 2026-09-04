@@ -20,3 +20,5 @@ tracing-subscriber =  {workspace = true}
 actix-web = "4.15.0"
 serde_json = {workspace = true}
 actix-files = "0.6"
+actix-multipart = "0.8.1"
+futures-util = "0.3"

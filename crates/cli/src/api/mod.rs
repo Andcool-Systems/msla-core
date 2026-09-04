@@ -1,9 +1,17 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::OnceLock};
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use msla_core::{config, types::cli::api::status::StatusResponse};
 use reqwest::Client;
-use serde_json::json;
+use reqwest::multipart::{Form, Part};
+use serde_json::Value;
+use tracing::{error, info};
+
+static CLIENT: OnceLock<Client> = OnceLock::new();
+
+pub fn get_client<'a>() -> &'a Client {
+    CLIENT.get_or_init(|| Client::new())
+}
 
 /// Return rest api url
 async fn get_api_url() -> String {
@@ -16,7 +24,11 @@ async fn get_api_url() -> String {
 
 /// Get current printing status
 pub async fn get_status() -> Result<StatusResponse> {
-    let response = match reqwest::get(format!("{}/status", get_api_url().await)).await {
+    let response = match get_client()
+        .get(format!("{}/status", get_api_url().await))
+        .send()
+        .await
+    {
         Ok(r) => r,
         Err(e) => {
             anyhow::bail!("Cannot fetch current status: {}", e)
@@ -34,22 +46,88 @@ pub async fn get_status() -> Result<StatusResponse> {
     Ok(serde_json::from_str(&response.text().await?)?)
 }
 
-pub async fn start_local_print(path: PathBuf) -> Result<()> {
-    let client = Client::new();
+pub enum PlacingType {
+    Local,
+    Remote,
+}
 
-    let response = client
-        .post(format!("{}/start/zip/local", get_api_url().await))
-        .header(reqwest::header::CONTENT_TYPE, "application/json")
-        .body(serde_json::to_vec(&json!({"path": path}))?)
+impl PlacingType {
+    pub fn to_str(&self) -> &str {
+        match self {
+            PlacingType::Local => "local",
+            PlacingType::Remote => "remote",
+        }
+    }
+}
+
+pub enum FileExt {
+    Zip,
+}
+
+impl FileExt {
+    pub fn to_str(&self) -> &str {
+        match self {
+            FileExt::Zip => "zip",
+        }
+    }
+}
+
+/// Generic start print function
+pub async fn start_print(
+    placing_type: PlacingType,
+    file_ext: FileExt,
+    path: PathBuf,
+) -> Result<()> {
+    let url = format!(
+        "{}/start/{}/{}",
+        get_api_url().await,
+        file_ext.to_str(),
+        placing_type.to_str()
+    );
+
+    let mut form = Form::new();
+    match placing_type {
+        PlacingType::Local => {
+            form = form.part(
+                "local_file",
+                Part::text(path.to_string_lossy().into_owned()),
+            )
+        },
+        PlacingType::Remote => {
+            let data = tokio::fs::read(&path)
+                .await
+                .map_err(|e| anyhow!("Cannot load file from this machine: {}", e))?;
+
+            let part = Part::bytes(data).file_name(
+                path.file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "file".to_owned()),
+            );
+            form = form.part("file", part)
+        },
+    };
+
+    let response = reqwest::Client::new()
+        .post(url)
+        .multipart(form)
         .send()
         .await?;
 
     if !response.status().is_success() {
-        anyhow::bail!(
-            "Cannot start print: ({}) {}",
-            response.status().as_u16(),
-            response.text().await?
-        )
+        let text = response.text().await?;
+        let message = serde_json::from_str::<Value>(&text)
+            .ok()
+            .and_then(|json| {
+                json.get("message")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+            })
+            .unwrap_or_else(|| text.clone());
+
+        error!("Cannot send model to printer: {}", message);
+        anyhow::bail!("Error during printer start");
     }
+
+    info!("Print started! Enjoy the spectacle of printing :)");
     Ok(())
 }

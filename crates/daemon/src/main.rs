@@ -59,7 +59,7 @@ async fn shutdown_signal() {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Set up logger
-    let reload_handle = logging::init_logger(tracing::Level::DEBUG);
+    let reload_handle = logging::init_logger(tracing::Level::DEBUG, true);
 
     // Load config from file
     config::load("./config.toml").await.map_err(|e| {
