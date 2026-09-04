@@ -91,8 +91,8 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                 message_lines.push(format!(
                     "{}: {:.2}/{:.2}mm",
                     "Height".bold(),
-                    current_status.current_layer as f64 * 0.05, // TODO: FIXME: REPLACE TO status.model_meta.layer_height
-                    model_meta.total_layer_count as f64 * 0.05
+                    current_status.current_layer as f64 * model_meta.layer_height,
+                    model_meta.total_layer_count as f64 * model_meta.layer_height
                 ));
                 message_lines.push(format!(
                     "{}: {}",

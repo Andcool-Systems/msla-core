@@ -13,7 +13,7 @@ use msla_core::{
     types::cli::args::{Args, Command},
 };
 use std::{net::IpAddr, path::PathBuf};
-use tracing::{error, info};
+use tracing::error;
 mod api;
 mod search;
 mod status;
@@ -109,10 +109,10 @@ async fn main() -> Result<()> {
                 .await?
                 .iter()
                 .for_each(|p| {
-                    info!(
+                    println!(
                         "{}",
                         format!(
-                            "Printer \"{}\", ver {} ({})",
+                            "Found printer \"{}\", ver {} ({})",
                             p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
                             p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
                             p.ip
