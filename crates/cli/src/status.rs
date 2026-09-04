@@ -5,6 +5,10 @@ use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use msla_core::types::cli::api::status::StatusResponse;
 use tokio::time::sleep;
+use tokio_retry::{
+    Retry,
+    strategy::{ExponentialBackoff, jitter},
+};
 use tracing::{error, info};
 
 use crate::api::ApiService;
@@ -45,9 +49,17 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
             .progress_chars("=> "),
     );
 
+    let retry_strategy = ExponentialBackoff::from_millis(100).map(jitter).take(3);
+
     loop {
         if instant.elapsed() > duration {
-            status = api_client.get_status().await?;
+            status = Retry::start(retry_strategy.clone(), || async {
+                api_client.get_status().await.map_err(|e| {
+                    error!("{}", e);
+                    e
+                })
+            })
+            .await?;
             updated = true;
             instant = Instant::now();
         }

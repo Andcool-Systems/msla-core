@@ -31,8 +31,6 @@ async fn get_printers(alt_scan: bool) -> Result<IpAddr> {
         return Ok(found.first().unwrap().ip);
     }
 
-    println!("{}", format!("{} printers found:", found.len()).bold());
-
     let options = found
         .iter()
         .map(|p| {
@@ -46,7 +44,11 @@ async fn get_printers(alt_scan: bool) -> Result<IpAddr> {
         .collect::<Vec<String>>();
 
     let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("Select option")
+        .with_prompt(
+            format!("{} printers found, select one", found.len())
+                .bold()
+                .to_string(),
+        )
         .items(options)
         .default(0)
         .interact()?;
@@ -63,6 +65,25 @@ async fn main() -> Result<()> {
     });
     let config = get_config().await;
     let args = Args::parse();
+
+    if let Command::Search(s) = args.command {
+        execute_search(s.timeout.unwrap_or(2), s.alt)
+            .await?
+            .iter()
+            .for_each(|p| {
+                println!(
+                    "{}",
+                    format!(
+                        "Found printer \"{}\", ver {} ({})",
+                        p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
+                        p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
+                        p.ip
+                    )
+                )
+            });
+
+        return Ok(());
+    }
 
     let api_client = ApiService::new(
         args.host
@@ -104,22 +125,7 @@ async fn main() -> Result<()> {
             )
             .await?;
         },
-        Command::Search(search_args) => {
-            execute_search(search_args.timeout.unwrap_or(2), search_args.alt)
-                .await?
-                .iter()
-                .for_each(|p| {
-                    println!(
-                        "{}",
-                        format!(
-                            "Found printer \"{}\", ver {} ({})",
-                            p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
-                            p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
-                            p.ip
-                        )
-                    )
-                });
-        },
+        Command::Search(_) => unreachable!(),
     }
 
     Ok(())

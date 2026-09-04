@@ -20,3 +20,4 @@ serde_json = {workspace = true}
 colored = "3.0.0"
 if-addrs = "0.13"
 dialoguer = "0.12.0"
+tokio-retry = "0.3.2"
