@@ -19,6 +19,9 @@ pub struct Config {
 pub struct GlobalConfig {
     /// Logging level
     pub logging_level: String,
+
+    /// Printer name
+    pub machine_name: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -35,9 +38,6 @@ pub struct REST {
 
     /// Server port
     pub port: u16,
-
-    /// Server White IP
-    pub external_addr: String,
 }
 
 #[derive(Deserialize, Debug)]

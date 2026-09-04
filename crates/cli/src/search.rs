@@ -1,4 +1,3 @@
-use colored::Colorize;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     time::{Duration, Instant},
@@ -52,8 +51,14 @@ fn find_broadcast() -> Option<IpAddr> {
     None
 }
 
+pub struct FoundPrinter {
+    pub ip: IpAddr,
+    pub name: Option<String>,
+    pub ver: Option<String>,
+}
+
 /// Execute search operation
-pub async fn execute_search(interval: u64, alt: bool) -> Result<()> {
+pub async fn execute_search(interval: u64, alt: bool) -> Result<Vec<FoundPrinter>> {
     let socket: UdpSocket = UdpSocket::bind("0.0.0.0:0").await?;
 
     socket.set_broadcast(true)?;
@@ -109,6 +114,7 @@ pub async fn execute_search(interval: u64, alt: bool) -> Result<()> {
     let mut buf = [0u8; 1500];
     let deadline = Instant::now() + Duration::from_secs(interval);
 
+    let mut found: Vec<FoundPrinter> = Vec::new();
     loop {
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
@@ -116,10 +122,39 @@ pub async fn execute_search(interval: u64, alt: bool) -> Result<()> {
         }
 
         let received = tokio::time::timeout(remaining, socket.recv_from(&mut buf)).await;
-        if let Ok(Ok((_, addr))) = received {
-            println!("Printer found at {}", addr.ip().to_string().bold());
+        if let Ok(Ok((size, addr))) = received
+            && buf.starts_with(&[0xAA, 0x55, 0x02])
+        {
+            let mut reader = 3;
+            let name = buf
+                .get(reader)
+                .filter(|&&len| size >= 4 + len as usize)
+                .and_then(|&len| {
+                    let len = (len + 1) as usize;
+                    let r = buf.get(reader + 1..reader + len);
+                    reader += len;
+                    r
+                })
+                .map(|bytes| String::from_utf8_lossy(bytes).into_owned());
+
+            let ver = buf
+                .get(reader)
+                .filter(|&&len| size >= 4 + len as usize)
+                .and_then(|&len| {
+                    let len = (len + 1) as usize;
+                    let r = buf.get(reader + 1..reader + len);
+                    reader += len;
+                    r
+                })
+                .map(|bytes| String::from_utf8_lossy(bytes).into_owned());
+
+            found.push(FoundPrinter {
+                ip: addr.ip(),
+                name,
+                ver,
+            });
         }
     }
 
-    Ok(())
+    Ok(found)
 }

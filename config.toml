@@ -1,5 +1,6 @@
 [global]
 logging_level = "debug"
+machine_name = "dev"
 
 [peripheral]
 uart = "COM9"
@@ -8,8 +9,6 @@ baud_rate = 115200
 [rest_api]
 addr = "0.0.0.0"
 port = 709
-
-external_addr = "192.168.0.185"
 
 [broadcast_listener]
 addr = "0.0.0.0"

@@ -19,8 +19,6 @@ pub async fn start_broadcast() -> Result<()> {
         let (len, addr) = socket.recv_from(&mut buf).await?;
         let packet = &buf[..len];
 
-        println!("rec: {:?}", packet);
-
         if packet.len() < 3 {
             continue;
         }
@@ -33,7 +31,14 @@ pub async fn start_broadcast() -> Result<()> {
             // DISCOVER
             0x01 => {
                 debug!("Discovery from {addr}");
-                let response = [0xAA, 0x55, 0x02];
+                let mut response: Vec<u8> = vec![0xAA, 0x55, 0x02];
+                response.push(config.global.machine_name.len() as u8);
+                response.extend_from_slice(config.global.machine_name.as_bytes());
+
+                let ver = env!("CARGO_PKG_VERSION");
+                response.push(ver.len() as u8);
+                response.extend_from_slice(ver.as_bytes());
+
                 socket.send_to(&response, addr).await?;
             },
 

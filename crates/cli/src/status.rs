@@ -1,12 +1,13 @@
 use std::time::{Duration, Instant};
 
-use crate::api::get_status;
 use anyhow::{Result, anyhow};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use msla_core::types::cli::api::status::StatusResponse;
 use tokio::time::sleep;
 use tracing::{error, info};
+
+use crate::api::ApiService;
 
 fn format_duration(total_seconds: u64) -> String {
     let hours = total_seconds / 3600;
@@ -29,11 +30,11 @@ fn capitalize(s: &str) -> String {
 }
 
 /// Display cli statusbar
-pub async fn show_status(watch: bool, period: u64) -> Result<()> {
+pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> Result<()> {
     let pb = ProgressBar::new(100);
     let mut instant = Instant::now();
     let duration = Duration::from_secs(period);
-    let mut status: StatusResponse = get_status().await?;
+    let mut status: StatusResponse = api_client.get_status().await?;
     let mut estimated = 0f64;
     let mut updated = false;
 
@@ -45,7 +46,7 @@ pub async fn show_status(watch: bool, period: u64) -> Result<()> {
 
     loop {
         if instant.elapsed() > duration {
-            status = get_status().await?;
+            status = api_client.get_status().await?;
             updated = true;
             instant = Instant::now();
         }
