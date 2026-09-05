@@ -84,7 +84,10 @@ pub async fn add_to_context(label: &str) -> Result<()> {
 pub async fn remove_from_context() -> Result<()> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     for ext in EXTENSIONS {
-        let key_path = format!(r"Software\Classes\.{}\shell\{}", ext, APP_FOLDER_NAME);
+        let key_path = format!(
+            r"Software\Classes\SystemFileAssociations\.{}\shell\{}",
+            ext, APP_FOLDER_NAME
+        );
         let _ = hkcu.delete_subkey_all(&key_path);
     }
 
