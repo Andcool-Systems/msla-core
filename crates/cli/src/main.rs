@@ -1,5 +1,6 @@
 use crate::{
     api::{ApiService, FileExt, PlacingType},
+    context::{add_to_context, remove_from_context},
     search::execute_search,
     status::show_status,
 };
@@ -8,18 +9,37 @@ use clap::Parser;
 use colored::Colorize;
 use dialoguer::{Select, theme::ColorfulTheme};
 use msla_core::{
-    config::{self, get_config},
     logging,
     types::cli::args::{Args, Command},
 };
+use notify_rust::{Notification, Urgency};
 use std::{net::IpAddr, path::PathBuf};
-use tracing::error;
+use tracing::{error, info};
+
 mod api;
+mod context;
 mod search;
 mod status;
 
-async fn get_printers(alt_scan: bool) -> Result<IpAddr> {
-    let found = execute_search(1, alt_scan).await?;
+#[cfg(windows)]
+fn hide_console() {
+    use windows::Win32::System::Console::GetConsoleWindow;
+    use windows::Win32::UI::WindowsAndMessaging::{SW_HIDE, ShowWindow};
+
+    unsafe {
+        let hwnd = GetConsoleWindow();
+
+        if !hwnd.is_invalid() {
+            let _ = ShowWindow(hwnd, SW_HIDE);
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn hide_console() {}
+
+async fn get_printers(alt_scan: bool, port: u16) -> Result<IpAddr> {
+    let found = execute_search(1, alt_scan, port).await?;
 
     if found.is_empty() {
         return Err(anyhow!(
@@ -59,39 +79,76 @@ async fn get_printers(alt_scan: bool) -> Result<IpAddr> {
 #[tokio::main]
 async fn main() -> Result<()> {
     logging::init_logger(tracing::Level::INFO, false);
-    config::load("config.toml").await.map_err(|e| {
-        error!("{}", e);
-        std::process::exit(-1);
-    });
-    let config = get_config().await;
     let args = Args::parse();
 
-    if let Command::Search(s) = args.command {
-        execute_search(s.timeout.unwrap_or(2), s.alt)
-            .await?
-            .iter()
-            .for_each(|p| {
-                println!(
-                    "{}",
-                    format!(
-                        "Found printer \"{}\", ver {} ({})",
-                        p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
-                        p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
-                        p.ip
-                    )
-                )
-            });
+    if args.from_context_menu {
+        hide_console();
+    }
 
-        return Ok(());
+    match execute(&args).await {
+        Ok(()) if args.from_context_menu => {
+            Notification::new()
+                .summary("Open MSLA")
+                .body("Command successfully sent!")
+                .show()?;
+            return Ok(());
+        },
+
+        Err(e) if args.from_context_menu => {
+            Notification::new()
+                .summary("Open MSLA")
+                .body(&e.to_string())
+                .urgency(Urgency::Critical)
+                .show()?;
+            return Err(e);
+        },
+
+        r => return r,
+    }
+}
+
+async fn execute(args: &Args) -> Result<()> {
+    match &args.command {
+        Command::Search(s) => {
+            execute_search(s.timeout.unwrap_or(2), s.alt, args.scan_port.unwrap_or(710))
+                .await?
+                .iter()
+                .for_each(|p| {
+                    println!(
+                        "{}",
+                        format!(
+                            "Found printer \"{}\", ver {} ({})",
+                            p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
+                            p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
+                            p.ip
+                        )
+                    )
+                });
+
+            return Ok(());
+        },
+        Command::ContextRegister => {
+            add_to_context("Sent to printer").await?;
+            return Ok(());
+        },
+        Command::ContextUnregister => {
+            remove_from_context().await?;
+            return Ok(());
+        },
+
+        _ => {},
     }
 
     let api_client = ApiService::new(
-        args.host
-            .unwrap_or(get_printers(args.alt_scan).await?.to_string()),
-        args.port.unwrap_or(config.rest_api.port),
+        args.host.clone().unwrap_or(
+            get_printers(args.alt_scan, args.scan_port.unwrap_or(710))
+                .await?
+                .to_string(),
+        ),
+        args.port.unwrap_or(709),
     );
 
-    match args.command {
+    match &args.command {
         Command::Start(start_args) => {
             let ext = if start_args.zip {
                 FileExt::Zip
@@ -100,11 +157,11 @@ async fn main() -> Result<()> {
                 return Ok(());
             };
 
-            if let Some(local) = start_args.local {
+            if let Some(local) = &start_args.local {
                 api_client
                     .start_print(PlacingType::Local, ext, PathBuf::from(local))
                     .await?;
-            } else if let Some(remote) = start_args.remote {
+            } else if let Some(remote) = &start_args.remote {
                 api_client
                     .start_print(PlacingType::Remote, ext, PathBuf::from(remote))
                     .await?;
@@ -112,9 +169,11 @@ async fn main() -> Result<()> {
                 error!("Please, specify the file path: --local <path> or --remote <path>")
             }
 
-            show_status(&api_client, true, 10).await?;
+            if start_args.watch {
+                show_status(&api_client, true, 10).await?;
+            }
         },
-        Command::Abort => todo!(),
+        Command::Abort => api_client.abort().await?,
         Command::Pause => todo!(),
         Command::Resume => todo!(),
         Command::Status(status_args) => {
@@ -125,7 +184,15 @@ async fn main() -> Result<()> {
             )
             .await?;
         },
-        Command::Search(_) => unreachable!(),
+        Command::Home => api_client.home().await?,
+        Command::DisableStepper => api_client.disable_stepper().await?,
+        Command::ShowPreview => {
+            info!("Open url: {}/preview", api_client.url)
+        },
+
+        Command::Search(_) | Command::ContextRegister | Command::ContextUnregister => {
+            unreachable!()
+        },
     }
 
     Ok(())

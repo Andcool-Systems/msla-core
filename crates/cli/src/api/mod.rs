@@ -5,7 +5,7 @@ use msla_core::types::cli::api::status::StatusResponse;
 use reqwest::Client;
 use reqwest::multipart::{Form, Part};
 use serde_json::Value;
-use tracing::{error, info};
+use tracing::info;
 
 pub enum PlacingType {
     Local,
@@ -35,7 +35,7 @@ impl FileExt {
 
 pub struct ApiService {
     client: Client,
-    url: String,
+    pub url: String,
 }
 
 impl ApiService {
@@ -44,6 +44,13 @@ impl ApiService {
             client: Client::new(),
             url: format!("http://{}:{}", host, port),
         }
+    }
+
+    /// Extract json value by key
+    fn extract_field(json: &String, key: &str) -> Option<String> {
+        serde_json::from_str::<Value>(json)
+            .ok()
+            .and_then(|json| json.get(key).and_then(Value::as_str).map(str::to_owned))
     }
 
     /// Get current printing status
@@ -56,10 +63,10 @@ impl ApiService {
         };
 
         if !response.status().is_success() {
+            let text = response.text().await?;
             anyhow::bail!(
-                "Cannot fetch current status: ({}) {}",
-                response.status().as_u16(),
-                response.text().await?
+                "Cannot fetch current status: {}",
+                Self::extract_field(&text, "message").unwrap_or(text)
             )
         }
 
@@ -106,20 +113,73 @@ impl ApiService {
 
         if !response.status().is_success() {
             let text = response.text().await?;
-            let message = serde_json::from_str::<Value>(&text)
-                .ok()
-                .and_then(|json| {
-                    json.get("message")
-                        .and_then(Value::as_str)
-                        .map(str::to_owned)
-                })
-                .unwrap_or_else(|| text.clone());
-
-            error!("Cannot send model to printer: {}", message);
-            anyhow::bail!("Error during printer start");
+            anyhow::bail!(
+                "Cannot send model to printer: {}",
+                Self::extract_field(&text, "message").unwrap_or(text)
+            );
         }
 
         info!("Print started! Enjoy the spectacle of printing :)");
+        Ok(())
+    }
+
+    /// Abort current print
+    pub async fn abort(&self) -> Result<()> {
+        let response = self
+            .client
+            .post(format!("{}/abort", self.url))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let text = response.text().await?;
+            anyhow::bail!(
+                "Cannot abort printing: {}",
+                Self::extract_field(&text, "message").unwrap_or(text)
+            );
+        }
+
+        info!("Print aborted");
+        Ok(())
+    }
+
+    /// Home Z axis
+    pub async fn home(&self) -> Result<()> {
+        let response = self
+            .client
+            .post(format!("{}/home", self.url))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let text = response.text().await?;
+            anyhow::bail!(
+                "Cannot send home signal to printer: {}",
+                Self::extract_field(&text, "message").unwrap_or(text)
+            );
+        }
+
+        info!("Print homing...");
+        Ok(())
+    }
+
+    /// Disable Z stepper
+    pub async fn disable_stepper(&self) -> Result<()> {
+        let response = self
+            .client
+            .post(format!("{}/disable-stepper", self.url))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let text = response.text().await?;
+            anyhow::bail!(
+                "Cannot send disable stepper signal to printer: {}",
+                Self::extract_field(&text, "message").unwrap_or(text)
+            );
+        }
+
+        info!("Z stepper disabled");
         Ok(())
     }
 }

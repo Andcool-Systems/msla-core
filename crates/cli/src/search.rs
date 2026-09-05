@@ -4,7 +4,6 @@ use std::{
 };
 
 use anyhow::Result;
-use msla_core::config;
 use tokio::net::UdpSocket;
 
 fn find_local_network() -> Option<(Ipv4Addr, u32)> {
@@ -58,7 +57,7 @@ pub struct FoundPrinter {
 }
 
 /// Execute search operation
-pub async fn execute_search(interval: u64, alt: bool) -> Result<Vec<FoundPrinter>> {
+pub async fn execute_search(interval: u64, alt: bool, port: u16) -> Result<Vec<FoundPrinter>> {
     let socket: UdpSocket = UdpSocket::bind("0.0.0.0:0").await?;
 
     socket.set_broadcast(true)?;
@@ -67,7 +66,6 @@ pub async fn execute_search(interval: u64, alt: bool) -> Result<Vec<FoundPrinter
         0xAA, 0x55, 0x01, // DISCOVER
     ];
 
-    let config = config::get_config().await;
     if alt {
         // Unicast scan
         let (local_ip, prefix) = find_local_network().expect("Cannot find local network");
@@ -91,10 +89,7 @@ pub async fn execute_search(interval: u64, alt: bool) -> Result<Vec<FoundPrinter
         let last_host = broadcast - 1;
 
         for host in first_host..=last_host {
-            let addr = SocketAddr::new(
-                IpAddr::V4(Ipv4Addr::from(host)),
-                config.broadcast_listener.port,
-            );
+            let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::from(host)), port);
 
             socket.send_to(&packet, addr).await?;
         }
@@ -105,10 +100,7 @@ pub async fn execute_search(interval: u64, alt: bool) -> Result<Vec<FoundPrinter
         socket.set_broadcast(true)?;
 
         socket
-            .send_to(
-                &packet,
-                SocketAddr::new(broadcast_ip, config.broadcast_listener.port),
-            )
+            .send_to(&packet, SocketAddr::new(broadcast_ip, port))
             .await?;
     }
     let mut buf = [0u8; 1500];

@@ -23,6 +23,21 @@ pub enum Command {
 
     /// Search printers in local network
     Search(SearchArgs),
+
+    /// Home Z axis
+    Home,
+
+    /// Disable Z stepper
+    DisableStepper,
+
+    /// Show model preview
+    ShowPreview,
+
+    /// Add "Send to printer" context option
+    ContextRegister,
+
+    /// Remove "Send to printer" context option
+    ContextUnregister,
 }
 
 #[derive(Parser, Debug)]
@@ -39,6 +54,9 @@ pub struct StartArgs {
     pub local: Option<String>,
     #[arg(long, conflicts_with = "local", help = "Path to file on this device")]
     pub remote: Option<String>,
+
+    #[arg(long, help = "Do not shutdown status")]
+    pub watch: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -71,6 +89,12 @@ pub struct Args {
     #[arg(long, help = "Use unicast search method (broadcast by default)")]
     pub alt_scan: bool,
 
+    #[arg(long, help = "Scanning port (710 by default)")]
+    pub scan_port: Option<u16>,
+
     #[arg(long, help = "Specify printer port")]
     pub port: Option<u16>,
+
+    #[arg(long, help = "Print is started from context menu")]
+    pub from_context_menu: bool,
 }
