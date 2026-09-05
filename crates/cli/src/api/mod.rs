@@ -159,7 +159,7 @@ impl ApiService {
             );
         }
 
-        info!("Print homing...");
+        info!("Printer homing...");
         Ok(())
     }
 

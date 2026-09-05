@@ -22,21 +22,21 @@ mod search;
 mod status;
 
 #[cfg(windows)]
-fn hide_console() {
+fn set_console_visible(visible: bool) {
     use windows::Win32::System::Console::GetConsoleWindow;
-    use windows::Win32::UI::WindowsAndMessaging::{SW_HIDE, ShowWindow};
+    use windows::Win32::UI::WindowsAndMessaging::{SW_HIDE, SW_SHOW, ShowWindow};
 
     unsafe {
         let hwnd = GetConsoleWindow();
 
         if !hwnd.is_invalid() {
-            let _ = ShowWindow(hwnd, SW_HIDE);
+            let _ = ShowWindow(hwnd, if visible { SW_SHOW } else { SW_HIDE });
         }
     }
 }
 
 #[cfg(not(windows))]
-fn hide_console() {}
+fn set_console_visible(visible: bool) {}
 
 async fn get_printers(alt_scan: bool, port: u16) -> Result<IpAddr> {
     let found = execute_search(1, alt_scan, port).await?;
@@ -48,8 +48,17 @@ async fn get_printers(alt_scan: bool, port: u16) -> Result<IpAddr> {
     }
 
     if found.len() == 1 {
-        return Ok(found.first().unwrap().ip);
+        let found = found.first().unwrap();
+        info!(
+            "Found printer \"{}\", ver {} ({})",
+            found.name.as_ref().unwrap_or(&"<unknown>".to_string()),
+            found.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
+            found.ip
+        );
+        return Ok(found.ip);
     }
+
+    set_console_visible(true);
 
     let options = found
         .iter()
@@ -82,7 +91,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     if args.from_context_menu {
-        hide_console();
+        set_console_visible(false);
     }
 
     match execute(&args).await {
@@ -90,6 +99,7 @@ async fn main() -> Result<()> {
             Notification::new()
                 .summary("Open MSLA")
                 .body("Command successfully sent!")
+                .appname("msla-cli")
                 .show()?;
             return Ok(());
         },
@@ -98,6 +108,7 @@ async fn main() -> Result<()> {
             Notification::new()
                 .summary("Open MSLA")
                 .body(&e.to_string())
+                .appname("msla-cli")
                 .urgency(Urgency::Critical)
                 .show()?;
             return Err(e);

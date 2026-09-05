@@ -1,39 +1,34 @@
 use tracing::{Level, subscriber::set_global_default};
 use tracing_subscriber::{
-    FmtSubscriber,
+    Registry,
     filter::LevelFilter,
-    fmt::format::{Compact, DefaultFields, Format, Writer},
-    fmt::time::{FormatTime, SystemTime},
+    fmt::time::SystemTime,
     prelude::*,
     reload::{self, Handle},
 };
 
-pub struct ConfigurableTimer(bool);
-
-impl FormatTime for ConfigurableTimer {
-    fn format_time(&self, writer: &mut Writer<'_>) -> std::fmt::Result {
-        if self.0 {
-            SystemTime.format_time(writer)
-        } else {
-            Ok(())
-        }
-    }
-}
-
-type ReloadHandle =
-    Handle<LevelFilter, FmtSubscriber<DefaultFields, Format<Compact, ConfigurableTimer>>>;
+type ReloadHandle = Handle<LevelFilter, Registry>;
 
 /// Init logger with provided level and configurable timestamps
 pub fn init_logger(initial_level: Level, with_time: bool) -> ReloadHandle {
     let filter = LevelFilter::from_level(initial_level);
     let (filter_layer, reload_handle) = reload::Layer::new(filter);
 
-    let builder = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
-        .compact()
-        .with_timer(ConfigurableTimer(with_time));
+    let fmt_layer = if with_time {
+        tracing_subscriber::fmt::layer()
+            .compact()
+            .with_timer(SystemTime)
+            .boxed()
+    } else {
+        tracing_subscriber::fmt::layer()
+            .compact()
+            .without_time()
+            .boxed()
+    };
 
-    let subscriber = builder.finish().with(filter_layer);
+    let subscriber = tracing_subscriber::registry()
+        .with(filter_layer)
+        .with(fmt_layer);
 
     set_global_default(subscriber).expect("Failed to set global default subscriber");
 
