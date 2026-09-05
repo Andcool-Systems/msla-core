@@ -128,7 +128,7 @@ async fn execute(args: &Args) -> Result<()> {
             return Ok(());
         },
         Command::ContextRegister => {
-            add_to_context("Sent to printer").await?;
+            add_to_context("Send to printer").await?;
             return Ok(());
         },
         Command::ContextUnregister => {
