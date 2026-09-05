@@ -136,62 +136,62 @@ async fn execute(args: &Args) -> Result<()> {
             return Ok(());
         },
 
-        _ => {},
-    }
+        command => {
+            let api_client = ApiService::new(
+                args.host.clone().unwrap_or(
+                    get_printers(args.alt_scan, args.scan_port.unwrap_or(710))
+                        .await?
+                        .to_string(),
+                ),
+                args.port.unwrap_or(709),
+            );
 
-    let api_client = ApiService::new(
-        args.host.clone().unwrap_or(
-            get_printers(args.alt_scan, args.scan_port.unwrap_or(710))
-                .await?
-                .to_string(),
-        ),
-        args.port.unwrap_or(709),
-    );
+            match command {
+                Command::Start(start_args) => {
+                    let ext = if start_args.zip {
+                        FileExt::Zip
+                    } else {
+                        error!("Please, specify the file type: --zip or others");
+                        return Ok(());
+                    };
 
-    match &args.command {
-        Command::Start(start_args) => {
-            let ext = if start_args.zip {
-                FileExt::Zip
-            } else {
-                error!("Please, specify the file type: --zip or others");
-                return Ok(());
-            };
+                    if let Some(local) = &start_args.local {
+                        api_client
+                            .start_print(PlacingType::Local, ext, PathBuf::from(local))
+                            .await?;
+                    } else if let Some(remote) = &start_args.remote {
+                        api_client
+                            .start_print(PlacingType::Remote, ext, PathBuf::from(remote))
+                            .await?;
+                    } else {
+                        error!("Please, specify the file path: --local <path> or --remote <path>")
+                    }
 
-            if let Some(local) = &start_args.local {
-                api_client
-                    .start_print(PlacingType::Local, ext, PathBuf::from(local))
+                    if start_args.watch {
+                        show_status(&api_client, true, 10).await?;
+                    }
+                },
+                Command::Abort => api_client.abort().await?,
+                Command::Pause => todo!(),
+                Command::Resume => todo!(),
+                Command::Status(status_args) => {
+                    show_status(
+                        &api_client,
+                        status_args.watch,
+                        status_args.period.unwrap_or(10),
+                    )
                     .await?;
-            } else if let Some(remote) = &start_args.remote {
-                api_client
-                    .start_print(PlacingType::Remote, ext, PathBuf::from(remote))
-                    .await?;
-            } else {
-                error!("Please, specify the file path: --local <path> or --remote <path>")
-            }
+                },
+                Command::Home => api_client.home().await?,
+                Command::DisableStepper => api_client.disable_stepper().await?,
+                Command::ShowPreview => {
+                    info!("Open url: {}/preview", api_client.url)
+                },
 
-            if start_args.watch {
-                show_status(&api_client, true, 10).await?;
+                Command::Search(_) | Command::ContextRegister | Command::ContextUnregister => {
+                    unreachable!()
+                },
             }
-        },
-        Command::Abort => api_client.abort().await?,
-        Command::Pause => todo!(),
-        Command::Resume => todo!(),
-        Command::Status(status_args) => {
-            show_status(
-                &api_client,
-                status_args.watch,
-                status_args.period.unwrap_or(10),
-            )
-            .await?;
-        },
-        Command::Home => api_client.home().await?,
-        Command::DisableStepper => api_client.disable_stepper().await?,
-        Command::ShowPreview => {
-            info!("Open url: {}/preview", api_client.url)
-        },
-
-        Command::Search(_) | Command::ContextRegister | Command::ContextUnregister => {
-            unreachable!()
         },
     }
 

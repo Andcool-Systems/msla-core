@@ -23,6 +23,7 @@ fn get_installed_exe_path() -> Result<PathBuf> {
         .join(TARGET_EXE_NAME))
 }
 
+/// Add context menu option for print start
 pub async fn add_to_context(label: &str) -> Result<()> {
     let exe_path = env::current_exe()?;
     let target_exe = get_installed_exe_path()?;
