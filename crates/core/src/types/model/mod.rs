@@ -7,7 +7,7 @@ pub mod ir;
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct GlobalPrintingMeta {
     pub file_name: Option<String>,
-    pub total_layer_count: Option<usize>,
+    pub total_layer_count: usize,
     pub estimated_printing_time: Option<usize>,
     pub volume: Option<f32>,
     pub weight: Option<f32>,

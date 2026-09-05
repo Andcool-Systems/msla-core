@@ -38,6 +38,18 @@ pub enum Command {
 
     /// Remove "Send to printer" context option
     ContextUnregister,
+
+    /// Display model info
+    ModelInfo(ModelInfoArgs),
+}
+
+#[derive(Parser, Debug)]
+pub struct ModelInfoArgs {
+    #[arg(long, help = "Zip model extension"/*, conflicts_with = "other_ext"*/)]
+    pub zip: bool,
+
+    #[arg(long, help = "Path to the model")]
+    pub path: String,
 }
 
 #[derive(Parser, Debug)]

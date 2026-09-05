@@ -12,7 +12,6 @@ serialport = {workspace = true}
 tokio = {workspace = true}
 image = "0.25.10"
 memmap2 = "0.9"
-zip = "8.6.0"
 tempfile = {workspace = true}
 serde = {workspace = true}
 tracing = {workspace = true}

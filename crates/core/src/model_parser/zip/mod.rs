@@ -1,11 +1,11 @@
 use std::{fs::File, path::Path, sync::Arc};
 mod gcode;
-use crate::input::zip::gcode::GCodeParser;
 use anyhow::{Result, anyhow};
-use msla_core::types::model::Model;
 use tempfile::{TempDir, tempdir};
 use tokio::fs;
 use zip::ZipArchive;
+
+use crate::{model_parser::zip::gcode::GCodeParser, types::model::Model};
 
 /// Load zip model from file
 pub async fn load_zip_model(zip_path: impl AsRef<std::path::Path>) -> Result<Arc<Model>> {

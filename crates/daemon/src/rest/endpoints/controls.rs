@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use crate::input::zip::load_zip_model;
 use actix_multipart::form::text::Text;
 use actix_multipart::form::{MultipartForm, tempfile::TempFile};
 use actix_web::{HttpResponse, Responder, post, web};
+use msla_core::model_parser::zip::load_zip_model;
 use msla_core::types::{
     printer_manager::{PrinterCommand, PrinterState},
     rest::RESTPrinterState,

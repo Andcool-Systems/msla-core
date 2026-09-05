@@ -13,8 +13,6 @@ pub enum PrintingIR {
     DisableSteppers,
     EnableSteppers,
     SetStepperCurrent(u16),
-
-    Meta(MetaIR),
 }
 
 impl PrintingIR {
@@ -25,12 +23,6 @@ impl PrintingIR {
             estimated_remaining: Duration::default(),
         }
     }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum MetaIR {
-    LayerStart(usize),
-    LayerEnd,
 }
 
 /// Timed IR contains an estimated remaining time to print finish

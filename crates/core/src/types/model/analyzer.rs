@@ -46,8 +46,6 @@ impl Analyzer {
             | PrintingIR::DisableSteppers
             | PrintingIR::SetStepperCurrent(_)
             | PrintingIR::ShowImage(_) => Duration::from_millis(200),
-
-            PrintingIR::Meta(_) => Duration::ZERO,
         }
     }
 }

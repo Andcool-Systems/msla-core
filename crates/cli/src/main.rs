@@ -1,6 +1,7 @@
 use crate::{
     api::{ApiService, FileExt, PlacingType},
     context::{add_to_context, remove_from_context},
+    model_info::print_model_info,
     search::execute_search,
     status::show_status,
 };
@@ -18,6 +19,7 @@ use tracing::{error, info};
 
 mod api;
 mod context;
+mod model_info;
 mod search;
 mod status;
 
@@ -146,6 +148,7 @@ async fn execute(args: &Args) -> Result<()> {
             remove_from_context().await?;
             return Ok(());
         },
+        Command::ModelInfo(model_info_args) => print_model_info(model_info_args).await?,
 
         command => {
             let api_client = ApiService::new(
@@ -199,7 +202,10 @@ async fn execute(args: &Args) -> Result<()> {
                     info!("Open url: {}/preview", api_client.url)
                 },
 
-                Command::Search(_) | Command::ContextRegister | Command::ContextUnregister => {
+                Command::Search(_)
+                | Command::ContextRegister
+                | Command::ContextUnregister
+                | Command::ModelInfo(_) => {
                     unreachable!()
                 },
             }

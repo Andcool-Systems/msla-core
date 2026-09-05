@@ -1,8 +1,8 @@
-use anyhow::{Result, anyhow};
-use msla_core::types::model::{
+use crate::types::model::{
     GlobalPrintingMeta,
-    ir::{MetaIR, PrintingIR, TimedIR},
+    ir::{PrintingIR, TimedIR},
 };
+use anyhow::{Result, anyhow};
 use std::{cmp::max, path::Path, str::SplitWhitespace, time::Duration};
 
 macro_rules! try_parse_number {
@@ -14,6 +14,8 @@ macro_rules! try_parse_number {
 pub struct GCodeParser {
     pub ir: Vec<TimedIR>,
     pub meta: GlobalPrintingMeta,
+
+    layer_counter: usize,
 }
 
 impl GCodeParser {
@@ -21,6 +23,7 @@ impl GCodeParser {
         Self {
             ir: Vec::new(),
             meta: GlobalPrintingMeta::default(),
+            layer_counter: 0,
         }
     }
 
@@ -81,6 +84,7 @@ impl GCodeParser {
             };
         }
 
+        self.meta.total_layer_count = max(self.meta.total_layer_count, self.layer_counter);
         Ok(())
     }
 
@@ -182,6 +186,8 @@ impl GCodeParser {
         let Some(filename) = iter.next() else {
             return false;
         };
+
+        self.layer_counter += 1;
         self.ir.push(
             PrintingIR::ShowImage(Path::new(&filename.trim_matches('"')).to_path_buf())
                 .to_timed_ir(),
@@ -195,33 +201,6 @@ impl GCodeParser {
         let (comm, data) = line.split_once(':').unwrap_or((line, ""));
 
         match comm.trim().to_lowercase().as_str() {
-            "layer_start" => {
-                let Some(n) = try_parse_number!(data, usize) else {
-                    return false;
-                };
-                let ex = self.meta.total_layer_count.unwrap_or(0);
-                self.meta.total_layer_count = Some(max(ex, n + 1));
-
-                self.ir
-                    .push(PrintingIR::Meta(MetaIR::LayerStart(n)).to_timed_ir());
-            },
-
-            "layer_end" => {
-                self.ir
-                    .push(PrintingIR::Meta(MetaIR::LayerEnd).to_timed_ir());
-            },
-
-            x => {
-                self.parse_metadata(x, data);
-            },
-        }
-
-        true
-    }
-
-    /// Try parse meta from gcode file
-    fn parse_metadata(&mut self, key: &str, data: &str) -> bool {
-        match key {
             "estimatedprinttime" => {
                 self.meta.estimated_printing_time = try_parse_number!(data, usize);
             },
@@ -247,10 +226,10 @@ impl GCodeParser {
             },
 
             "totallayer" => {
-                let ex = self.meta.total_layer_count.unwrap_or(0);
+                let ex = self.meta.total_layer_count;
 
                 if let Some(n) = try_parse_number!(data, usize) {
-                    self.meta.total_layer_count = Some(max(ex, n));
+                    self.meta.total_layer_count = max(ex, n);
                 }
             },
 

@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use msla_core::types::{
-    model::{
-        Model,
-        ir::{MetaIR, PrintingIR},
-    },
+    model::{Model, ir::PrintingIR},
     peripheral::StepperPositioning,
     printer_manager::{PrinterTaskCommand, PrinterTaskState, PrintingError, PrintingTaskMeta},
 };
@@ -135,6 +132,7 @@ impl PrinterTask {
             },
 
             PrintingIR::ShowImage(path_buf) => {
+                self.current_layer += 1;
                 self.lcd_controller
                     .show_image(self.printing_model.working_dir.path().join(path_buf))
                     .map_err(|e| PrintingError::new(format!("Cannot display image: {e}")))?;
@@ -167,13 +165,6 @@ impl PrinterTask {
                     .set_motor_current(current)
                     .await
                     .map_err(|e| PrintingError::new(format!("Cannot set stepper current: {e}")))?;
-            },
-
-            PrintingIR::Meta(meta) => match meta {
-                MetaIR::LayerStart(n) => {
-                    self.current_layer = n + 1;
-                },
-                MetaIR::LayerEnd => {},
             },
         }
 

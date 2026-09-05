@@ -2159,6 +2159,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "zip",
 ]
 
 [[package]]
@@ -2180,7 +2181,6 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "zip",
 ]
 
 [[package]]

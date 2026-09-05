@@ -1,5 +1,4 @@
 mod broadcast;
-mod input;
 mod lcd;
 mod peripheral;
 mod printer_manager;

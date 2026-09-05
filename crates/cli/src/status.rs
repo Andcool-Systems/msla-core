@@ -1,5 +1,6 @@
 use std::time::{Duration, Instant};
 
+use crate::api::ApiService;
 use anyhow::{Result, anyhow};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -11,9 +12,7 @@ use tokio_retry::{
 };
 use tracing::{error, info};
 
-use crate::api::ApiService;
-
-fn format_duration(total_seconds: u64) -> String {
+pub fn format_duration(total_seconds: usize) -> String {
     let hours = total_seconds / 3600;
     let minutes = (total_seconds % 3600) / 60;
     let seconds = total_seconds % 60;
@@ -115,7 +114,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                 message_lines.push(format!(
                     "{}: {}",
                     "ETA".bold(),
-                    format_duration(estimated as u64)
+                    format_duration(estimated as usize)
                 ));
 
                 if !watch {
