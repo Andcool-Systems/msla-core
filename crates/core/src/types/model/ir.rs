@@ -12,6 +12,7 @@ pub enum PrintingIR {
 
     DisableSteppers,
     EnableSteppers,
+    SetStepperCurrent(u16),
 
     Meta(MetaIR),
 }

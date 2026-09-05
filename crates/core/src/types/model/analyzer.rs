@@ -44,6 +44,7 @@ impl Analyzer {
             PrintingIR::TurnUV { state: _ }
             | PrintingIR::EnableSteppers
             | PrintingIR::DisableSteppers
+            | PrintingIR::SetStepperCurrent(_)
             | PrintingIR::ShowImage(_) => Duration::from_millis(200),
 
             PrintingIR::Meta(_) => Duration::ZERO,

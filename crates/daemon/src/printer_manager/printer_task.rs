@@ -161,6 +161,14 @@ impl PrinterTask {
                     .map_err(|e| PrintingError::new(format!("Cannot enable steppers: {e}")))?;
             },
 
+            PrintingIR::SetStepperCurrent(current) => {
+                debug!("Set stepper current: {}mA", current);
+                self.peripheral_controller
+                    .set_motor_current(current)
+                    .await
+                    .map_err(|e| PrintingError::new(format!("Cannot set stepper current: {e}")))?;
+            },
+
             PrintingIR::Meta(meta) => match meta {
                 MetaIR::LayerStart(n) => {
                     self.current_layer = n + 1;

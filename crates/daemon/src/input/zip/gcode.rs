@@ -67,6 +67,11 @@ impl GCodeParser {
                     self.parse_m106(parts);
                 },
 
+                // Stepper current
+                "M906" => {
+                    self.parse_m906(parts);
+                },
+
                 // Show image
                 "M6054" => {
                     self.parse_m6054(parts);
@@ -150,6 +155,23 @@ impl GCodeParser {
         {
             self.ir
                 .push(PrintingIR::TurnUV { state: power > 0.0 }.to_timed_ir());
+        }
+
+        true
+    }
+
+    /// Set stepper current
+    fn parse_m906(&mut self, mut iter: SplitWhitespace) -> bool {
+        let Some(current) = iter.find(|p| p.starts_with("Z")) else {
+            return false;
+        };
+
+        if let Some(current) = current
+            .strip_prefix("Z")
+            .and_then(|current| current.parse::<u16>().ok())
+        {
+            self.ir
+                .push(PrintingIR::SetStepperCurrent(current).to_timed_ir());
         }
 
         true
