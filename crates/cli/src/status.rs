@@ -40,7 +40,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
     let mut status: StatusResponse = api_client.get_status().await?;
     let mut estimated = 0f64;
     let mut last_ir_index = 0;
-    let mut updated = false;
+    let mut updated = true;
 
     pb.set_style(
         ProgressStyle::with_template(&format!("{} [{{bar:40}}] {{msg}}", "Printing".green()))
@@ -106,6 +106,12 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                     model_meta.total_layer_count
                 ));
                 message_lines.push(format!(
+                    "{}: {}/{}",
+                    "IR".bold(),
+                    current_status.current_ir_index,
+                    model_meta.ir_len
+                ));
+                message_lines.push(format!(
                     "{}: {:.2}/{:.2}mm",
                     "Height".bold(),
                     current_status.current_layer as f64 * model_meta.layer_height,
@@ -117,12 +123,12 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                     format_duration(estimated as usize)
                 ));
 
+                pb.set_message(message_lines.join("\n"));
+
                 if !watch {
-                    pb.finish_with_message(message_lines.join("\n"));
+                    pb.abandon();
                     break;
                 }
-
-                pb.set_message(message_lines.join("\n"));
 
                 sleep(Duration::from_secs(1)).await;
                 estimated = (estimated - 1.0).max(0.0);
