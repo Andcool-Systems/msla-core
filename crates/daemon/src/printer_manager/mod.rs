@@ -54,6 +54,9 @@ impl PrinterManager {
 
     /// Run printer manager instance
     pub async fn run(&mut self) {
+        info!("Started Printer Manager");
+        info!("Waiting for incoming commands...");
+
         loop {
             tokio::select! {
                 Some(command) = self.command_receiver.recv() => {
