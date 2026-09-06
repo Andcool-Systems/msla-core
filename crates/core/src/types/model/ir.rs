@@ -4,7 +4,7 @@ use std::{path::PathBuf, time::Duration};
 pub enum PrintingIR {
     Home,
 
-    MoveZ { pos: f64, speed: f64 },
+    MoveZ(ZMoving),
     TurnUV { state: bool },
 
     ShowImage(PathBuf),
@@ -13,6 +13,23 @@ pub enum PrintingIR {
     DisableSteppers,
     EnableSteppers,
     SetStepperCurrent(u16),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ZMoving {
+    pub pos: f64,
+    pub speed: f64,
+    pub _last_pos: f64,
+}
+
+impl ZMoving {
+    pub fn new(pos: f64, speed: f64) -> Self {
+        Self {
+            pos,
+            speed,
+            _last_pos: 0.0,
+        }
+    }
 }
 
 impl PrintingIR {

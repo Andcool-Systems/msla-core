@@ -2,23 +2,18 @@ use crate::types::model::ir::PrintingIR;
 use std::time::Duration;
 
 #[derive(Default)]
-pub struct Analyzer {
-    pub current_z_pos: f64,
-}
+pub struct Analyzer {}
 
 impl Analyzer {
     pub fn calc_command_duration(&mut self, ir: &PrintingIR) -> Duration {
         match ir {
             // We cannot determine the homing time precisely, so we assume it to be zero.
-            PrintingIR::Home => {
-                self.current_z_pos = 0.0;
-                Duration::ZERO
-            },
+            PrintingIR::Home => Duration::ZERO,
 
-            PrintingIR::MoveZ { pos, speed } => {
-                let speed_mm_s = speed / 60.0;
+            PrintingIR::MoveZ(m) => {
+                let speed_mm_s = m.speed / 60.0;
                 let accel: f64 = 10.0;
-                let distance = (pos - self.current_z_pos).abs();
+                let distance = (m.pos - m._last_pos).abs();
                 let acceleration_distance = speed_mm_s.powi(2) / accel;
 
                 let secs = if distance >= acceleration_distance {
@@ -33,8 +28,6 @@ impl Analyzer {
                     let peak_speed = (distance * accel).sqrt();
                     2.0 * peak_speed / accel
                 };
-
-                self.current_z_pos = *pos;
                 Duration::from_secs_f64(secs)
             },
 

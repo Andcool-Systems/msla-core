@@ -67,37 +67,29 @@ impl PrinterTask {
 
             let command = self.printing_model.ir[i].clone();
 
-            tokio::select! {
-                result = self.execute_next_step(command.ir) => {
-                    match result {
-                        Ok(_) => {
-                            self.state = PrinterTaskState::Printing(
-                                PrintingTaskMeta::new(
-                                    self.current_layer,
-                                    self.printing_model.clone(),
-                                    self.current_ir_index
-                                )
-                            );
-                        }
-                        Err(e) => self.state = PrinterTaskState::Error(e),
-                    }
-                }
+            match self.execute_next_step(command.ir).await {
+                Ok(_) => {
+                    self.state = PrinterTaskState::Printing(PrintingTaskMeta::new(
+                        self.current_layer,
+                        self.printing_model.clone(),
+                        self.current_ir_index,
+                    ));
+                },
+                Err(e) => self.state = PrinterTaskState::Error(e),
+            }
 
-                command = command_receiver.recv() => {
-                    match command {
-                        Some(command) => {
-                            if !self.handle_command(command).await {
-                                self.send_current_status().await;
-                                return;
-                            }
-                        }
-
-                        None => {
-                            error!("Printer Task has lost external control!");
-                            return;
-                        }
+            match command_receiver.recv().await {
+                Some(command) => {
+                    if !self.handle_command(command).await {
+                        self.send_current_status().await;
+                        return;
                     }
-                }
+                },
+
+                None => {
+                    error!("Printer Task has lost external control!");
+                    return;
+                },
             }
         }
 
@@ -115,10 +107,10 @@ impl PrinterTask {
                     .map_err(|e| PrintingError::new(format!("Cannot home Z axis: {e}")))?;
             },
 
-            PrintingIR::MoveZ { pos, speed } => {
-                debug!("Move Z to {}mm, speed: {}mm/m", pos, speed);
+            PrintingIR::MoveZ(m) => {
+                debug!("Move Z to {}mm, speed: {}mm/m", m.pos, m.speed);
                 self.peripheral_controller
-                    .move_z_to(pos, speed, StepperPositioning::Absolute)
+                    .move_z_to(m.pos, m.speed, StepperPositioning::Absolute)
                     .await
                     .map_err(|e| PrintingError::new(format!("Cannot move Z axis: {e}")))?;
             },

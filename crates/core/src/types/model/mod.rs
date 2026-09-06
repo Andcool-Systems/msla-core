@@ -1,5 +1,8 @@
-use crate::types::model::{analyzer::Analyzer, ir::TimedIR};
-use std::{path::PathBuf, sync::Arc};
+use crate::types::model::{
+    analyzer::Analyzer,
+    ir::{PrintingIR, TimedIR},
+};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 use tempfile::TempDir;
 pub mod analyzer;
 pub mod ir;
@@ -43,13 +46,27 @@ impl Model {
         m
     }
 
+    /// Fulfill all internal fields and calculate estimated remaining time
     pub fn calc_estimated(&mut self) {
+        let mut pos = 0.0;
+        for m in self.ir.iter_mut() {
+            if matches!(m.ir, PrintingIR::Home) {
+                pos = 0.0;
+            }
+
+            if let PrintingIR::MoveZ(mov) = &mut m.ir {
+                mov._last_pos = pos;
+                pos = mov.pos;
+            }
+        }
         let mut analyzer = Analyzer::default();
-        let mut dur = analyzer.calc_command_duration(&self.ir.last().unwrap().ir);
+        let mut duration = Duration::ZERO;
 
         for x in self.ir.iter_mut().rev() {
-            x.estimated_remaining = dur;
-            dur += analyzer.calc_command_duration(&x.ir);
+            duration += analyzer.calc_command_duration(&x.ir);
+            x.estimated_remaining = duration;
         }
+
+        self.model_meta.estimated_printing_time = Some(duration.as_secs() as usize);
     }
 }

@@ -1,6 +1,6 @@
 use crate::types::model::{
     GlobalPrintingMeta,
-    ir::{PrintingIR, TimedIR},
+    ir::{PrintingIR, TimedIR, ZMoving},
 };
 use anyhow::{Result, anyhow};
 use std::{cmp::max, path::Path, str::SplitWhitespace, time::Duration};
@@ -118,13 +118,8 @@ impl GCodeParser {
         // If no Z-axis command is found in the current G-code, skip it
         let Some(pos) = z_pos else { return };
 
-        self.ir.push(
-            PrintingIR::MoveZ {
-                pos,
-                speed: z_speed.unwrap_or(50.0),
-            }
-            .to_timed_ir(),
-        )
+        self.ir
+            .push(PrintingIR::MoveZ(ZMoving::new(pos, z_speed.unwrap_or(50.0))).to_timed_ir())
     }
 
     /// Parse dwell

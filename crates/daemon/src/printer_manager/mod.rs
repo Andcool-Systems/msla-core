@@ -1,7 +1,5 @@
 pub mod printer_task;
 
-use std::sync::Arc;
-
 use crate::{
     lcd::LCDController, peripheral::PeripheralController,
     printer_manager::printer_task::PrinterTask,
@@ -10,6 +8,7 @@ use msla_core::types::{
     model::Model,
     printer_manager::{PrinterCommand, PrinterState, PrinterTaskCommand, PrinterTaskState},
 };
+use std::sync::Arc;
 use tokio::sync::{
     mpsc::{self, Receiver, Sender},
     watch::{self, Receiver as ReceiverWatch, Sender as WatchSender},
