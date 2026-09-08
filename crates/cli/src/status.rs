@@ -12,14 +12,17 @@ use tokio_retry::{
 };
 use tracing::{error, info};
 
-pub fn format_duration(total_seconds: usize) -> String {
-    let hours = total_seconds / 3600;
+pub fn format_duration(dur: Duration) -> String {
+    let total_seconds = dur.as_secs();
+    let days = total_seconds / (3600 * 24);
+    let hours = (total_seconds % (3600 * 24)) / 3600;
     let minutes = (total_seconds % 3600) / 60;
     let seconds = total_seconds % 60;
 
-    match (hours, minutes) {
-        (h, _) if h > 0 => format!("{h}h {minutes}m {seconds}s"),
-        (_, m) if m > 0 => format!("{m}m {seconds}s"),
+    match (days, hours, minutes) {
+        (d, _, _) if d > 0 => format!("{d}d {hours}h {minutes}m {seconds}s"),
+        (_, h, _) if h > 0 => format!("{h}h {minutes}m {seconds}s"),
+        (_, _, m) if m > 0 => format!("{m}m {seconds}s"),
         _ => format!("{seconds}s"),
     }
 }
@@ -38,7 +41,8 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
     let mut instant = Instant::now();
     let duration = Duration::from_secs(period);
     let mut status: StatusResponse = api_client.get_status().await?;
-    let mut estimated = 0f64;
+    let mut estimated = Duration::ZERO;
+    let mut estimated_elapsed = Instant::now();
     let mut last_ir_index = 0;
     let mut updated = true;
 
@@ -61,6 +65,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
             .await?;
             updated = true;
             instant = Instant::now();
+            estimated_elapsed = Instant::now();
         }
 
         match status.state.as_str() {
@@ -87,7 +92,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
 
                     // If printer executing new ir
                     if current_status.current_ir_index != last_ir_index {
-                        estimated = current_status.estimated_finish_time;
+                        estimated = Duration::from_secs_f64(current_status.estimated_finish_time);
                         last_ir_index = current_status.current_ir_index;
                     }
                 }
@@ -114,13 +119,13 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                 message_lines.push(format!(
                     "{}: {:.2}/{:.2}mm",
                     "Height".bold(),
-                    current_status.current_layer as f64 * model_meta.layer_height,
-                    model_meta.total_layer_count as f64 * model_meta.layer_height
+                    current_status.current_layer as f64 * model_meta.layer_height.unwrap_or(0.05),
+                    model_meta.total_layer_count as f64 * model_meta.layer_height.unwrap_or(0.05)
                 ));
                 message_lines.push(format!(
                     "{}: {}",
                     "ETA".bold(),
-                    format_duration(estimated as usize)
+                    format_duration(estimated - estimated_elapsed.elapsed())
                 ));
 
                 pb.set_message(message_lines.join("\n"));
@@ -131,7 +136,6 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                 }
 
                 sleep(Duration::from_secs(1)).await;
-                estimated = (estimated - 1.0).max(0.0);
             },
             "aborted" => {
                 pb.finish_with_message("Printing aborted");

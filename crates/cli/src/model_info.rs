@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::status::format_duration;
 use anyhow::Result;
 use colored::Colorize;
@@ -32,13 +34,9 @@ pub async fn print_model_info(model_info_args: &ModelInfoArgs) -> Result<()> {
         format!(
             "{}: {}",
             "Estimated print time".bold(),
-            format_duration(
-                model
-                    .model_meta
-                    .estimated_printing_time
-                    .clone()
-                    .unwrap_or(0)
-            )
+            format_duration(Duration::from_secs(
+                model.model_meta.estimated_printing_time.unwrap_or(0) as u64
+            ))
         ),
         format!(
             "{}: {:.3}",

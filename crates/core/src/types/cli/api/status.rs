@@ -19,10 +19,10 @@ pub struct CurrentStatusResponse {
 pub struct ModelMetaResponse {
     pub estimated_printing_time: usize,
     pub ir_len: usize,
-    pub layer_height: f64,
-    pub name: String,
-    pub price: f64,
+    pub layer_height: Option<f64>,
+    pub name: Option<String>,
+    pub price: Option<f64>,
     pub total_layer_count: usize,
-    pub volume: f64,
-    pub weight: f64,
+    pub volume: Option<f64>,
+    pub weight: Option<f64>,
 }

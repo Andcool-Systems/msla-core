@@ -91,6 +91,7 @@ impl UARTPacket {
     }
 }
 
+#[allow(unused)]
 impl UARTPacket {
     /// Extends a reader position to a provided length and returns old value
     fn extend_reader(&mut self, len: usize) -> usize {

@@ -151,14 +151,13 @@ async fn execute(args: &Args) -> Result<()> {
         Command::ModelInfo(model_info_args) => print_model_info(model_info_args).await?,
 
         command => {
-            let api_client = ApiService::new(
-                args.host.clone().unwrap_or(
-                    get_printers(args.alt_scan, args.scan_port.unwrap_or(710))
-                        .await?
-                        .to_string(),
-                ),
-                args.port.unwrap_or(709),
-            );
+            let host = match args.host.clone() {
+                Some(host) => host,
+                None => get_printers(args.alt_scan, args.scan_port.unwrap_or(710))
+                    .await?
+                    .to_string(),
+            };
+            let api_client = ApiService::new(host, args.port.unwrap_or(709));
 
             match command {
                 Command::Start(start_args) => {

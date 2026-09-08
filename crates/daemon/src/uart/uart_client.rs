@@ -55,7 +55,7 @@ impl UARTClient {
                     },
                     Ok(None) => continue,
                     Err(err) => {
-                        error!("Failed to read from Uart: {err}");
+                        error!("Failed to read from Uart: {:?}", err);
                         continue;
                     },
                 }
@@ -65,6 +65,7 @@ impl UARTClient {
         Ok(())
     }
 
+    /// Create new UART client
     pub fn new(uart: Uart) -> Result<Arc<Self>> {
         let cl = Arc::new(Self {
             writer: OnceLock::new(),
@@ -76,6 +77,7 @@ impl UARTClient {
         Ok(cl)
     }
 
+    /// Create new UART request
     pub async fn request(
         &self,
         packet: UARTPacket,

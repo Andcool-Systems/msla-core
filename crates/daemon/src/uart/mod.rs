@@ -92,6 +92,7 @@ impl Uart {
     }
 }
 
+#[allow(unused)]
 pub enum UARTCommand {
     Send(UARTPacket),
     Stop,
