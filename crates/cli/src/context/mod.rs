@@ -8,11 +8,14 @@ pub use win::add_to_context;
 pub use win::remove_from_context;
 
 #[cfg(not(target_os = "windows"))]
-pub fn add_to_context(label: &str) -> ! {
+use anyhow::Result;
+
+#[cfg(not(target_os = "windows"))]
+pub async fn add_to_context(label: &str) -> Result<()> {
     panic!("Context options not supported on this OS yet")
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn remove_from_context() -> ! {
+pub async fn remove_from_context() -> Result<()> {
     panic!("Context options not supported on this OS yet")
 }
