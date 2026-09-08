@@ -8,7 +8,7 @@ pub use win::add_to_context;
 pub use win::remove_from_context;
 
 #[cfg(not(target_os = "windows"))]
-pub fn add_to_context(extensions: &[&str], label: &str, args: &str) -> ! {
+pub fn add_to_context(label: &str) -> ! {
     panic!("Context options not supported on this OS yet")
 }
 
