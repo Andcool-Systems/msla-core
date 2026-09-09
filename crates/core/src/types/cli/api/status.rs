@@ -13,6 +13,7 @@ pub struct CurrentStatusResponse {
     pub current_ir_index: usize,
     pub current_layer: usize,
     pub estimated_finish_time: f64,
+    pub total_elapsed: f64,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

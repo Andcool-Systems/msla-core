@@ -43,7 +43,6 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
     let mut status: StatusResponse = api_client.get_status().await?;
     let mut estimated = Duration::ZERO;
     let mut estimated_elapsed = Instant::now();
-    let mut last_ir_index = 0;
     let mut updated = true;
 
     pb.set_style(
@@ -65,7 +64,6 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
             .await?;
             updated = true;
             instant = Instant::now();
-            estimated_elapsed = Instant::now();
         }
 
         match status.state.as_str() {
@@ -90,11 +88,8 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                         .progress_chars("=> "),
                     );
 
-                    // If printer executing new ir
-                    if current_status.current_ir_index != last_ir_index {
-                        estimated = Duration::from_secs_f64(current_status.estimated_finish_time);
-                        last_ir_index = current_status.current_ir_index;
-                    }
+                    estimated = Duration::from_secs_f64(current_status.estimated_finish_time);
+                    estimated_elapsed = Instant::now();
                 }
 
                 let percent =
@@ -103,7 +98,11 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                 pb.set_position(percent.round() as u64);
 
                 let mut message_lines: Vec<String> = Vec::new();
-                message_lines.push(format!("{percent:.2}%"));
+                message_lines.push(format!(
+                    "{percent:.2}% ({}: {})",
+                    "ETA".bold(),
+                    format_duration(estimated - estimated_elapsed.elapsed())
+                ));
                 message_lines.push(format!(
                     "{}: {}/{}",
                     "Layer".bold(),
@@ -124,8 +123,11 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                 ));
                 message_lines.push(format!(
                     "{}: {}",
-                    "ETA".bold(),
-                    format_duration(estimated - estimated_elapsed.elapsed())
+                    "Total elapsed".bold(),
+                    format_duration(
+                        Duration::from_secs_f64(current_status.total_elapsed)
+                            + estimated_elapsed.elapsed()
+                    )
                 ));
 
                 pb.set_message(message_lines.join("\n"));

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use msla_core::types::{
     model::{Model, ir::PrintingIR},
@@ -18,6 +18,8 @@ pub struct PrinterTask {
     printing_model: Arc<Model>,
     current_layer: usize,
     current_ir_index: usize,
+    current_ir_elapsed: Instant,
+    total_elapsed: Instant,
 
     state: PrinterTaskState,
 
@@ -42,12 +44,14 @@ impl PrinterTask {
             state: PrinterTaskState::Idle,
             current_layer: 0,
             current_ir_index: 0,
+            current_ir_elapsed: Instant::now(),
+            total_elapsed: Instant::now(),
         }
     }
 
     pub async fn run(&mut self, mut command_receiver: Receiver<PrinterTaskCommand>) {
-        self.state =
-            PrinterTaskState::Printing(PrintingTaskMeta::new(0, self.printing_model.clone(), 0));
+        self.total_elapsed = Instant::now();
+        self.state = PrinterTaskState::Printing(self.build_task_meta());
 
         for i in 0..self.printing_model.ir.len() {
             self.current_ir_index = i;
@@ -72,11 +76,7 @@ impl PrinterTask {
                     match result {
                         Ok(_) => {
                             self.state = PrinterTaskState::Printing(
-                                PrintingTaskMeta::new(
-                                    self.current_layer,
-                                    self.printing_model.clone(),
-                                    self.current_ir_index
-                                )
+                                self.build_task_meta()
                             );
                         }
                         Err(e) => self.state = PrinterTaskState::Error(e),
@@ -201,11 +201,7 @@ impl PrinterTask {
                 Some(c) => match c {
                     PrinterTaskCommand::Pause => {},
                     PrinterTaskCommand::Resume => {
-                        self.state = PrinterTaskState::Printing(PrintingTaskMeta::new(
-                            self.current_layer,
-                            self.printing_model.clone(),
-                            self.current_ir_index,
-                        ));
+                        self.state = PrinterTaskState::Printing(self.build_task_meta());
                         return true;
                     },
                     PrinterTaskCommand::Abort => {
@@ -231,16 +227,22 @@ impl PrinterTask {
             },
 
             PrinterTaskCommand::Pause => {
-                self.state = PrinterTaskState::Paused(PrintingTaskMeta::new(
-                    self.current_layer,
-                    self.printing_model.clone(),
-                    self.current_ir_index,
-                ));
+                self.state = PrinterTaskState::Paused(self.build_task_meta());
                 let _ = self.peripheral_controller.turn_uv(false).await;
                 true
             },
 
             PrinterTaskCommand::Resume => true,
+        }
+    }
+
+    fn build_task_meta(&self) -> PrintingTaskMeta {
+        PrintingTaskMeta {
+            printing_layer: self.current_layer,
+            current_ir_index: self.current_ir_index,
+            current_ir_elapsed: self.current_ir_elapsed,
+            total_elapsed: self.total_elapsed,
+            model: self.printing_model.clone(),
         }
     }
 }

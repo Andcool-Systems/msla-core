@@ -38,7 +38,8 @@ pub async fn get_status(state: web::Data<RESTPrinterState>) -> impl Responder {
             res.current_status = Some(json!({
                 "current_layer": meta.printing_layer,
                 "current_ir_index": meta.current_ir_index,
-                "estimated_finish_time": est.as_secs_f64()
+                "estimated_finish_time": (est - meta.current_ir_elapsed.elapsed()).as_secs_f64(),
+                "total_elapsed": meta.total_elapsed.elapsed().as_secs_f64()
             }));
 
             res.model_meta = Some(json!({

@@ -1,6 +1,6 @@
 use crate::types::model::Model;
 use core::fmt;
-use std::{error::Error, sync::Arc};
+use std::{error::Error, sync::Arc, time::Instant};
 
 /// Command for controlling printer manager
 pub enum PrinterCommand {
@@ -50,17 +50,9 @@ pub enum PrinterTaskCommand {
 pub struct PrintingTaskMeta {
     pub printing_layer: usize,
     pub current_ir_index: usize,
+    pub current_ir_elapsed: Instant,
+    pub total_elapsed: Instant,
     pub model: Arc<Model>,
-}
-
-impl PrintingTaskMeta {
-    pub fn new(layer: usize, model: Arc<Model>, current_ir_index: usize) -> Self {
-        Self {
-            printing_layer: layer,
-            model,
-            current_ir_index,
-        }
-    }
 }
 
 /// State of current printing task
