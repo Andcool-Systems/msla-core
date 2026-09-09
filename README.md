@@ -1,5 +1,19 @@
 # DIY MSLA 3D Printer Core Code
-<img src="resources/irl.jpg" align="center" height="500" />
+<table align="center">
+  <tr>
+    <td>
+      <img src="resources/irl.jpg" height="300">
+    </td>
+    <td>
+      <img src="resources/123.jpg" height="300">
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <img src="resources/benchy.jpg" width="100%">
+    </td>
+  </tr>
+</table>
 
 ## Daemon Features
 - Fully async
