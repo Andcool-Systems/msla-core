@@ -33,7 +33,7 @@ impl Analyzer {
 
             PrintingIR::Wait(duration) => *duration,
 
-            // 500ms - Approx time of communication with peripheral, awaiting answer, etc.
+            // 200ms - Approx time of communication with peripheral, awaiting answer, etc.
             PrintingIR::TurnUV { state: _ }
             | PrintingIR::EnableSteppers
             | PrintingIR::DisableSteppers
