@@ -11,7 +11,7 @@ serde = {workspace = true}
 tokio = {workspace = true}
 clap = {workspace = true}
 anyhow = {workspace = true}
-toml = "0.8.20"
+toml = {workspace = true}
 tracing = {workspace = true}
 tracing-subscriber =  {workspace = true}
 zip = "8.6.0"

@@ -14,11 +14,13 @@ use msla_core::{
     types::cli::args::{Args, Command},
 };
 use notify_rust::{Notification, Urgency};
+use std::process;
 use std::{net::IpAddr, path::PathBuf};
 use tracing::{error, info};
 
 mod api;
 mod context;
+mod dyn_config;
 mod model_info;
 mod search;
 mod status;
@@ -90,6 +92,7 @@ async fn get_printers(alt_scan: bool, port: u16) -> Result<IpAddr> {
 #[tokio::main]
 async fn main() -> Result<()> {
     logging::init_logger(tracing::Level::INFO, false);
+    dyn_config::init_config().await?;
     let args = Args::parse();
 
     if args.from_context_menu {
@@ -123,20 +126,26 @@ async fn main() -> Result<()> {
 async fn execute(args: &Args) -> Result<()> {
     match &args.command {
         Command::Search(s) => {
-            execute_search(s.timeout.unwrap_or(2), s.alt, args.scan_port.unwrap_or(710))
-                .await?
-                .iter()
-                .for_each(|p| {
-                    println!(
-                        "{}",
-                        format!(
-                            "Found printer \"{}\", ver {} ({})",
-                            p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
-                            p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
-                            p.ip
-                        )
+            let config = dyn_config::config()?.read().await;
+            execute_search(
+                s.timeout.unwrap_or(2),
+                config.connectivity.alt_default || s.alt,
+                args.scan_port
+                    .unwrap_or(config.connectivity.default_scan_port),
+            )
+            .await?
+            .iter()
+            .for_each(|p| {
+                println!(
+                    "{}",
+                    format!(
+                        "Found printer \"{}\", ver {} ({})",
+                        p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
+                        p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
+                        p.ip
                     )
-                });
+                )
+            });
 
             return Ok(());
         },
@@ -150,14 +159,43 @@ async fn execute(args: &Args) -> Result<()> {
         },
         Command::ModelInfo(model_info_args) => print_model_info(model_info_args).await?,
 
+        Command::ChangeConfig(config) => {
+            match config.always_alt_scan.as_deref() {
+                Some("true") | Some("t") => modify_config!(connectivity.alt_default = true),
+                Some("false") | Some("f") => modify_config!(connectivity.alt_default = false),
+                Some(_) => {
+                    error!("Cannot parse `always_alt_scan`. Use `true` | `false`");
+                    process::exit(-1);
+                },
+                None => {},
+            }
+
+            if let Some(port) = config.default_port {
+                modify_config!(connectivity.default_port = port);
+            }
+
+            if let Some(port) = config.default_scan_port {
+                modify_config!(connectivity.default_scan_port = port);
+            }
+
+            dyn_config::write_config(&*dyn_config::config()?.read().await).await?;
+            info!("Config updated!");
+        },
+
         command => {
+            let config = dyn_config::config()?.read().await;
             let host = match args.host.clone() {
                 Some(host) => host,
-                None => get_printers(args.alt_scan, args.scan_port.unwrap_or(710))
-                    .await?
-                    .to_string(),
+                None => get_printers(
+                    config.connectivity.alt_default || args.alt_scan,
+                    args.scan_port
+                        .unwrap_or(config.connectivity.default_scan_port),
+                )
+                .await?
+                .to_string(),
             };
-            let api_client = ApiService::new(host, args.port.unwrap_or(709));
+            let api_client =
+                ApiService::new(host, args.port.unwrap_or(config.connectivity.default_port));
 
             match command {
                 Command::Start(start_args) => {
@@ -204,7 +242,8 @@ async fn execute(args: &Args) -> Result<()> {
                 Command::Search(_)
                 | Command::ContextRegister
                 | Command::ContextUnregister
-                | Command::ModelInfo(_) => {
+                | Command::ModelInfo(_)
+                | Command::ChangeConfig(_) => {
                     unreachable!()
                 },
             }

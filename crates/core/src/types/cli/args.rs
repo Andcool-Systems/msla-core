@@ -41,6 +41,9 @@ pub enum Command {
 
     /// Display model info
     ModelInfo(ModelInfoArgs),
+
+    /// Change cli configuration
+    ChangeConfig(ConfigChange),
 }
 
 #[derive(Parser, Debug)]
@@ -87,6 +90,18 @@ pub struct SearchArgs {
 
     #[arg(long, help = "Use unicast method (broadcast by default)")]
     pub alt: bool,
+}
+
+#[derive(Parser, Debug)]
+pub struct ConfigChange {
+    #[arg(long, help = "Always use alternative scan method")]
+    pub always_alt_scan: Option<String>,
+
+    #[arg(long, help = "Default printer port")]
+    pub default_port: Option<u16>,
+
+    #[arg(long, help = "Default printer scan port")]
+    pub default_scan_port: Option<u16>,
 }
 
 #[derive(Parser, Debug)]
