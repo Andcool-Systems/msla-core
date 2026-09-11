@@ -153,6 +153,76 @@ fn save_png(pixels: &[u8], width: u32, height: u32, path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Extract preview image
+fn extract_preview(data: &[u8], address: usize, output: impl AsRef<std::path::Path>) -> Result<()> {
+    let width = i32_at(data, address)? as usize;
+    let height = i32_at(data, address + 4)? as usize;
+    let image_address = i32_at(data, address + 8)? as usize;
+    let data_length = i32_at(data, address + 12)? as usize;
+
+    let image_data = data
+        .get(image_address..image_address + data_length)
+        .ok_or(anyhow!("preview image data is out of bounds"))?;
+
+    let pixel_count = width * height;
+    let mut pixels = Vec::with_capacity(pixel_count);
+
+    let mut pos = 0;
+
+    while pos + 2 <= image_data.len() && pixels.len() < pixel_count {
+        let value = u16::from_le_bytes([image_data[pos], image_data[pos + 1]]);
+        pos += 2;
+
+        let r = ((value >> 11) & 0x1F) as u8;
+        let g = ((value >> 6) & 0x1F) as u8;
+        let b = (value & 0x1F) as u8;
+
+        let r = (r << 3) | (r >> 2);
+        let g = (g << 3) | (g >> 2);
+        let b = (b << 3) | (b >> 2);
+
+        // This pixel is always present once.
+        pixels.push([r, g, b]);
+
+        if value & 0x20 != 0 {
+            if pos + 2 > image_data.len() {
+                anyhow::bail!("truncated preview RLE data");
+            }
+
+            let repeat = u16::from_le_bytes([image_data[pos], image_data[pos + 1]]) & 0x0FFF;
+            pos += 2;
+
+            for _ in 0..repeat {
+                if pixels.len() >= pixel_count {
+                    break;
+                }
+
+                pixels.push([r, g, b]);
+            }
+        }
+    }
+
+    if pixels.len() != pixel_count {
+        anyhow::bail!(
+            "invalid preview: decoded {} pixels, expected {}",
+            pixels.len(),
+            pixel_count
+        );
+    }
+
+    let mut raw = Vec::with_capacity(pixel_count * 3);
+
+    for [r, g, b] in pixels {
+        raw.extend_from_slice(&[r, g, b]);
+    }
+
+    let image = image::RgbImage::from_raw(width as u32, height as u32, raw)
+        .ok_or(anyhow!("failed to create preview image"))?;
+
+    image.save(output)?;
+    Ok(())
+}
+
 /// Load .photon file
 pub async fn load_photon_model(photon_path: impl AsRef<std::path::Path>) -> Result<Arc<Model>> {
     let temp_dir = tempdir().map_err(|e| anyhow!("Cannot create temp dir: {}", e))?;
@@ -245,6 +315,13 @@ pub async fn load_photon_model(photon_path: impl AsRef<std::path::Path>) -> Resu
     // And, finally, disable stepper
     command_vec.push(PrintingIR::DisableSteppers);
 
+    let try_preview_path = temp_dir.path().join("preview.jpg");
+    let preview_path = match extract_preview(&data, header.preview_high as usize, &try_preview_path)
+    {
+        Ok(_) => Some(try_preview_path),
+        Err(_) => None,
+    };
+
     // Construct meta struct
     let print_meta = GlobalPrintingMeta {
         file_name: photon_path
@@ -263,6 +340,6 @@ pub async fn load_photon_model(photon_path: impl AsRef<std::path::Path>) -> Resu
         command_vec.iter().map(PrintingIR::to_timed_ir).collect(),
         print_meta,
         Arc::new(temp_dir),
-        None,
+        preview_path,
     )))
 }

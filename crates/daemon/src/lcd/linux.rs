@@ -17,7 +17,7 @@ pub struct LCDController {
 impl LCDController {
     /// Create new LCD controller
     pub fn new() -> Result<Self> {
-        let fb = Arc::new(OpenOptions::new().read(true).write(true).open("/dev/fb0")?);
+        let fb = Arc::new(OpenOptions::new().write(true).open("/dev/fb0")?);
 
         Ok(Self { fb })
     }
