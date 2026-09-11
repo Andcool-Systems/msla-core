@@ -55,6 +55,7 @@ impl PrinterTask {
 
         for i in 0..self.printing_model.ir.len() {
             self.current_ir_index = i;
+            self.current_ir_elapsed = Instant::now();
             self.send_current_status().await;
 
             match self.state {
@@ -70,7 +71,6 @@ impl PrinterTask {
             }
 
             let command = self.printing_model.ir[i].clone();
-
             tokio::select! {
                 result = self.execute_next_step(command.ir) => {
                     match result {

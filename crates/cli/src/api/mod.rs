@@ -47,7 +47,7 @@ impl ApiService {
     }
 
     /// Extract json value by key
-    fn extract_field(json: &String, key: &str) -> Option<String> {
+    fn extract_field(json: &str, key: &str) -> Option<String> {
         serde_json::from_str::<Value>(json)
             .ok()
             .and_then(|json| json.get(key).and_then(Value::as_str).map(str::to_owned))

@@ -137,13 +137,10 @@ async fn execute(args: &Args) -> Result<()> {
             .iter()
             .for_each(|p| {
                 println!(
-                    "{}",
-                    format!(
-                        "Found printer \"{}\", ver {} ({})",
-                        p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
-                        p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
-                        p.ip
-                    )
+                    "Found printer \"{}\", ver {} ({})",
+                    p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
+                    p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
+                    p.ip
                 )
             });
 

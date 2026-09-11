@@ -37,14 +37,13 @@ fn find_broadcast() -> Option<IpAddr> {
         if iface.is_loopback() {
             continue;
         }
-        if let if_addrs::IfAddr::V4(v4_addr) = iface.addr {
-            if let Some(broadcast) = v4_addr.broadcast
-                && !EXCLUDE_NAMES
-                    .iter()
-                    .any(|e| iface.name.to_lowercase().contains(e))
-            {
-                return Some(IpAddr::V4(broadcast));
-            }
+        if let if_addrs::IfAddr::V4(v4_addr) = iface.addr
+            && let Some(broadcast) = v4_addr.broadcast
+            && !EXCLUDE_NAMES
+                .iter()
+                .any(|e| iface.name.to_lowercase().contains(e))
+        {
+            return Some(IpAddr::V4(broadcast));
         }
     }
     None
