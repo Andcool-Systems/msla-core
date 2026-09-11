@@ -67,20 +67,17 @@ pub async fn start_print(
         _ => return HttpResponse::BadRequest().json(json!({"message": "Invalid placing"})),
     };
 
-    let model = match path.0.as_str() {
-        "zip" => match load_zip_model(file).await {
-            Ok(m) => m,
-            Err(e) => {
-                return HttpResponse::BadRequest().json(json!({"message": format!("{}", e)}));
-            },
-        },
-        "photon" => match load_photon_model(file).await {
-            Ok(m) => m,
-            Err(e) => {
-                return HttpResponse::BadRequest().json(json!({"message": format!("{}", e)}));
-            },
-        },
+    let model_res = match path.0.as_str() {
+        "zip" => load_zip_model(file).await,
+        "photon" => load_photon_model(file).await,
         _ => return HttpResponse::BadRequest().json(json!({"message": "Unknown file format"})),
+    };
+
+    let model = match model_res {
+        Ok(m) => m,
+        Err(e) => {
+            return HttpResponse::BadRequest().json(json!({"message": format!("{}", e)}));
+        },
     };
 
     drop(file_handler);
