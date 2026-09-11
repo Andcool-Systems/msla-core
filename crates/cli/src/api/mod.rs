@@ -23,12 +23,14 @@ impl PlacingType {
 
 pub enum FileExt {
     Zip,
+    Photon,
 }
 
 impl FileExt {
     pub fn to_str(&self) -> &str {
         match self {
             FileExt::Zip => "zip",
+            FileExt::Photon => "photon",
         }
     }
 }

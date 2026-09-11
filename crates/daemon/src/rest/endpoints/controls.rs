@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use actix_multipart::form::text::Text;
 use actix_multipart::form::{MultipartForm, tempfile::TempFile};
 use actix_web::{HttpResponse, Responder, post, web};
+use msla_core::model_parser::photon::load_photon_model;
 use msla_core::model_parser::zip::load_zip_model;
 use msla_core::types::{
     printer_manager::{PrinterCommand, PrinterState},
@@ -68,6 +69,12 @@ pub async fn start_print(
 
     let model = match path.0.as_str() {
         "zip" => match load_zip_model(file).await {
+            Ok(m) => m,
+            Err(e) => {
+                return HttpResponse::BadRequest().json(json!({"message": format!("{}", e)}));
+            },
+        },
+        "photon" => match load_photon_model(file).await {
             Ok(m) => m,
             Err(e) => {
                 return HttpResponse::BadRequest().json(json!({"message": format!("{}", e)}));

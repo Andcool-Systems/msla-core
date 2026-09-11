@@ -14,7 +14,7 @@ use winreg::enums::*;
 
 const APP_FOLDER_NAME: &str = "OpenMSLA";
 const TARGET_EXE_NAME: &str = "msla-cli.exe";
-const EXTENSIONS: [&str; 1] = ["zip"];
+const EXTENSIONS: [&str; 2] = ["zip", "photon"];
 
 fn get_installed_exe_path() -> Result<PathBuf> {
     let local_app_data = env::var("LOCALAPPDATA")?;

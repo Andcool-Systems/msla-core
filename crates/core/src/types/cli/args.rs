@@ -57,14 +57,12 @@ pub struct ModelInfoArgs {
 
 #[derive(Parser, Debug)]
 pub struct StartArgs {
-    #[arg(long, help = "Zip model extension"/*, conflicts_with = "other_ext"*/)]
+    #[arg(long, help = "Zip model extension", conflicts_with_all = ["photon"])]
     pub zip: bool,
 
-    /*
-    #[arg(long = "other-ext", conflicts_with = "zip")]
-    other_ext: bool,
+    #[arg(long, help = "Photon model extension", conflicts_with_all = ["zip"])]
+    pub photon: bool,
 
-    */
     #[arg(long, conflicts_with = "remote", help = "Path to file on printer")]
     pub local: Option<String>,
     #[arg(long, conflicts_with = "local", help = "Path to file on this device")]

@@ -198,6 +198,8 @@ async fn execute(args: &Args) -> Result<()> {
                 Command::Start(start_args) => {
                     let ext = if start_args.zip {
                         FileExt::Zip
+                    } else if start_args.photon {
+                        FileExt::Photon
                     } else {
                         error!("Please, specify the file type: --zip or others");
                         return Ok(());
