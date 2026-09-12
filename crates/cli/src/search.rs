@@ -1,14 +1,16 @@
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
     time::{Duration, Instant},
 };
 
 use anyhow::Result;
-use tokio::net::UdpSocket;
+use tokio::{net::UdpSocket, sync::mpsc::UnboundedSender, time::sleep};
+
+const EXCLUDE_NAMES: [&str; 4] = ["vpn", "wsl", "loopback", "tun"];
 
 fn find_local_network() -> Option<(Ipv4Addr, u32)> {
     let interfaces = if_addrs::get_if_addrs().ok()?;
-    const EXCLUDE_NAMES: [&str; 4] = ["vpn", "wsl", "loopback", "tun"];
 
     for iface in interfaces {
         if iface.is_loopback()
@@ -32,16 +34,17 @@ fn find_local_network() -> Option<(Ipv4Addr, u32)> {
 
 fn find_broadcast() -> Option<IpAddr> {
     let interfaces = if_addrs::get_if_addrs().ok()?;
-    const EXCLUDE_NAMES: [&str; 4] = ["vpn", "wsl", "loopback", "tun"];
+
     for iface in interfaces {
-        if iface.is_loopback() {
+        if iface.is_loopback()
+            || EXCLUDE_NAMES
+                .iter()
+                .any(|e| iface.name.to_lowercase().contains(e))
+        {
             continue;
         }
         if let if_addrs::IfAddr::V4(v4_addr) = iface.addr
             && let Some(broadcast) = v4_addr.broadcast
-            && !EXCLUDE_NAMES
-                .iter()
-                .any(|e| iface.name.to_lowercase().contains(e))
         {
             return Some(IpAddr::V4(broadcast));
         }
@@ -49,18 +52,7 @@ fn find_broadcast() -> Option<IpAddr> {
     None
 }
 
-pub struct FoundPrinter {
-    pub ip: IpAddr,
-    pub name: Option<String>,
-    pub ver: Option<String>,
-}
-
-/// Execute search operation
-pub async fn execute_search(interval: u64, alt: bool, port: u16) -> Result<Vec<FoundPrinter>> {
-    let socket: UdpSocket = UdpSocket::bind("0.0.0.0:0").await?;
-
-    socket.set_broadcast(true)?;
-
+async fn send_discover(socket: &UdpSocket, alt: bool, port: u16) -> Result<()> {
     let packet = [
         0xAA, 0x55, 0x01, // DISCOVER
     ];
@@ -102,50 +94,75 @@ pub async fn execute_search(interval: u64, alt: bool, port: u16) -> Result<Vec<F
             .send_to(&packet, SocketAddr::new(broadcast_ip, port))
             .await?;
     }
-    let mut buf = [0u8; 1500];
-    let deadline = Instant::now() + Duration::from_secs(interval);
 
-    let mut found: Vec<FoundPrinter> = Vec::new();
-    loop {
-        let remaining = deadline.saturating_duration_since(Instant::now());
-        if remaining.is_zero() {
-            break;
+    Ok(())
+}
+
+#[derive(Clone)]
+pub struct FoundPrinter {
+    pub ip: IpAddr,
+    pub name: Option<String>,
+    pub ver: Option<String>,
+
+    pub _last_updated: Instant,
+}
+
+/// Execute search operation
+pub async fn start_search(
+    alt: bool,
+    port: u16,
+    tx: UnboundedSender<FoundPrinter>,
+) -> Result<(tokio::task::JoinHandle<()>, tokio::task::JoinHandle<()>)> {
+    let socket = Arc::new(UdpSocket::bind("0.0.0.0:0").await?);
+    socket.set_broadcast(true)?;
+
+    let sender_socket = socket.clone();
+    let sender_handle = tokio::spawn(async move {
+        loop {
+            let _ = send_discover(&sender_socket, alt, port).await;
+            sleep(Duration::from_secs(5)).await;
         }
+    });
 
-        let received = tokio::time::timeout(remaining, socket.recv_from(&mut buf)).await;
-        if let Ok(Ok((size, addr))) = received
-            && buf.starts_with(&[0xAA, 0x55, 0x02])
-        {
-            let mut reader = 3;
-            let name = buf
-                .get(reader)
-                .filter(|&&len| size >= 4 + len as usize)
-                .and_then(|&len| {
-                    let len = (len + 1) as usize;
-                    let r = buf.get(reader + 1..reader + len);
-                    reader += len;
-                    r
-                })
-                .map(|bytes| String::from_utf8_lossy(bytes).into_owned());
+    let listener_handle = tokio::spawn(async move {
+        let mut buf = [0u8; 1500];
+        loop {
+            let received = socket.recv_from(&mut buf).await;
+            if let Ok((size, addr)) = received
+                && buf.starts_with(&[0xAA, 0x55, 0x02])
+            {
+                let mut reader = 3;
+                let name = buf
+                    .get(reader)
+                    .filter(|&&len| size >= 4 + len as usize)
+                    .and_then(|&len| {
+                        let len = (len + 1) as usize;
+                        let r = buf.get(reader + 1..reader + len);
+                        reader += len;
+                        r
+                    })
+                    .map(|bytes| String::from_utf8_lossy(bytes).into_owned());
 
-            let ver = buf
-                .get(reader)
-                .filter(|&&len| size >= 4 + len as usize)
-                .and_then(|&len| {
-                    let len = (len + 1) as usize;
-                    let r = buf.get(reader + 1..reader + len);
-                    reader += len;
-                    r
-                })
-                .map(|bytes| String::from_utf8_lossy(bytes).into_owned());
+                let ver = buf
+                    .get(reader)
+                    .filter(|&&len| size >= 4 + len as usize)
+                    .and_then(|&len| {
+                        let len = (len + 1) as usize;
+                        let r = buf.get(reader + 1..reader + len);
+                        reader += len;
+                        r
+                    })
+                    .map(|bytes| String::from_utf8_lossy(bytes).into_owned());
 
-            found.push(FoundPrinter {
-                ip: addr.ip(),
-                name,
-                ver,
-            });
+                let _ = tx.send(FoundPrinter {
+                    ip: addr.ip(),
+                    name,
+                    ver,
+                    _last_updated: Instant::now(),
+                });
+            }
         }
-    }
+    });
 
-    Ok(found)
+    Ok((sender_handle, listener_handle))
 }

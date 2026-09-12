@@ -21,9 +21,6 @@ pub enum Command {
     /// Get current printer status
     Status(StatusArgs),
 
-    /// Search printers in local network
-    Search(SearchArgs),
-
     /// Home Z axis
     Home,
 
@@ -79,15 +76,6 @@ pub struct StatusArgs {
 
     #[arg(long, help = "Printer polling interval")]
     pub period: Option<u64>,
-}
-
-#[derive(Parser, Debug)]
-pub struct SearchArgs {
-    #[arg(long, help = "How long wait for a response from the printers")]
-    pub timeout: Option<u64>,
-
-    #[arg(long, help = "Use unicast method (broadcast by default)")]
-    pub alt: bool,
 }
 
 #[derive(Parser, Debug)]

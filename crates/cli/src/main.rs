@@ -2,26 +2,25 @@ use crate::{
     api::{ApiService, FileExt, PlacingType},
     context::{add_to_context, remove_from_context},
     model_info::print_model_info,
-    search::execute_search,
+    printer_selector::run_selector,
     status::show_status,
 };
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use clap::Parser;
-use colored::Colorize;
-use dialoguer::{Select, theme::ColorfulTheme};
 use msla_core::{
     logging,
     types::cli::args::{Args, Command},
 };
 use notify_rust::{Notification, Urgency};
+use std::path::PathBuf;
 use std::process;
-use std::{net::IpAddr, path::PathBuf};
 use tracing::{error, info};
 
 mod api;
 mod context;
 mod dyn_config;
 mod model_info;
+mod printer_selector;
 mod search;
 mod status;
 
@@ -41,53 +40,6 @@ fn set_console_visible(visible: bool) {
 
 #[cfg(not(windows))]
 fn set_console_visible(visible: bool) {}
-
-async fn get_printers(alt_scan: bool, port: u16) -> Result<IpAddr> {
-    let found = execute_search(1, alt_scan, port).await?;
-
-    if found.is_empty() {
-        return Err(anyhow!(
-            "Printers in this local network not found. Specify IP `--host <ip>`"
-        ));
-    }
-
-    if found.len() == 1 {
-        let found = found.first().unwrap();
-        info!(
-            "Found printer \"{}\", ver {} ({})",
-            found.name.as_ref().unwrap_or(&"<unknown>".to_string()),
-            found.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
-            found.ip
-        );
-        return Ok(found.ip);
-    }
-
-    set_console_visible(true);
-
-    let options = found
-        .iter()
-        .map(|p| {
-            format!(
-                "Printer \"{}\", ver {} ({})",
-                p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
-                p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
-                p.ip
-            )
-        })
-        .collect::<Vec<String>>();
-
-    let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt(
-            format!("{} printers found, select one", found.len())
-                .bold()
-                .to_string(),
-        )
-        .items(options)
-        .default(0)
-        .interact()?;
-
-    Ok(found.get(selection).unwrap().ip)
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -125,27 +77,6 @@ async fn main() -> Result<()> {
 
 async fn execute(args: &Args) -> Result<()> {
     match &args.command {
-        Command::Search(s) => {
-            let config = dyn_config::config()?.read().await;
-            execute_search(
-                s.timeout.unwrap_or(2),
-                config.connectivity.alt_default || s.alt,
-                args.scan_port
-                    .unwrap_or(config.connectivity.default_scan_port),
-            )
-            .await?
-            .iter()
-            .for_each(|p| {
-                println!(
-                    "Found printer \"{}\", ver {} ({})",
-                    p.name.as_ref().unwrap_or(&"<unknown>".to_string()),
-                    p.ver.as_ref().unwrap_or(&"<unknown>".to_string()),
-                    p.ip
-                )
-            });
-
-            return Ok(());
-        },
         Command::ContextRegister => {
             add_to_context("Send to printer").await?;
             return Ok(());
@@ -183,14 +114,26 @@ async fn execute(args: &Args) -> Result<()> {
             let config = dyn_config::config()?.read().await;
             let host = match args.host.clone() {
                 Some(host) => host,
-                None => get_printers(
-                    config.connectivity.alt_default || args.alt_scan,
-                    args.scan_port
-                        .unwrap_or(config.connectivity.default_scan_port),
-                )
-                .await?
-                .to_string(),
+                None => {
+                    if args.from_context_menu {
+                        set_console_visible(true);
+                    }
+
+                    run_selector(
+                        config.connectivity.alt_default || args.alt_scan,
+                        args.scan_port
+                            .unwrap_or(config.connectivity.default_scan_port),
+                    )
+                    .await?
+                    .ip
+                    .to_string()
+                },
             };
+
+            if args.from_context_menu {
+                set_console_visible(false);
+            }
+
             let api_client =
                 ApiService::new(host, args.port.unwrap_or(config.connectivity.default_port));
 
@@ -238,8 +181,7 @@ async fn execute(args: &Args) -> Result<()> {
                     info!("Open url: {}/preview", api_client.url)
                 },
 
-                Command::Search(_)
-                | Command::ContextRegister
+                Command::ContextRegister
                 | Command::ContextUnregister
                 | Command::ModelInfo(_)
                 | Command::ChangeConfig(_) => {
