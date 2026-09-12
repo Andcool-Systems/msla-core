@@ -100,13 +100,13 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
                 stdout,
                 SetAttribute(Attribute::Bold),
                 Print(format!(
-                    "{} Searching for other printers...\n",
+                    "\n{} Searching for other printers...\n",
                     LOADER[loader_index].green()
                 )),
                 SetAttribute(Attribute::Reset),
             )?;
 
-            written_lines = found.len() as u16 + 2;
+            written_lines = found.len() as u16 + 3;
             Ok(())
         };
 
