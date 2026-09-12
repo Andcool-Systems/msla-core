@@ -33,7 +33,7 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
         let _ = event::read()?;
     }
 
-    execute!(stdout, Hide)?;
+    execute!(stdout, Hide, Print("\n"))?;
 
     let mut written_lines = 0;
     let mut draw =
