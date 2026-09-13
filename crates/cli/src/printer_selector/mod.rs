@@ -33,7 +33,7 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
         let _ = event::read()?;
     }
 
-    execute!(stdout, Hide, Print("\n"))?;
+    execute!(stdout, Hide, Print("\r\n"))?;
 
     let mut written_lines = 0;
     let mut draw =
@@ -53,7 +53,7 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
                 Print(" Select printer"),
                 SetAttribute(Attribute::Reset),
                 SetForegroundColor(Color::Grey),
-                Print(" ›\n"),
+                Print(" ›\r\n"),
                 SetAttribute(Attribute::Reset),
             )?;
 
@@ -87,7 +87,7 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
                 execute!(
                     stdout,
                     Print(format!(
-                        " {:<width$} ({})\n",
+                        " {:<width$} ({})\r\n",
                         format!("\"{name}\", ver {ver}"),
                         printer.ip
                     )),
@@ -100,7 +100,7 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
                 stdout,
                 SetAttribute(Attribute::Bold),
                 Print(format!(
-                    "\n{} Searching for other printers...\n",
+                    "\r\n{} Searching for other printers...\r\n",
                     LOADER[loader_index].green()
                 )),
                 SetAttribute(Attribute::Reset),
@@ -210,7 +210,7 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
             Print("  Selected · "),
             SetForegroundColor(Color::DarkGreen),
             Print(format!(
-                "\"{}\", ver {} ({})\n",
+                "\"{}\", ver {} ({})\r\n",
                 name, ver, selected_printer.ip
             )),
             SetAttribute(Attribute::Reset),
