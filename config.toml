@@ -13,3 +13,6 @@ port = 709
 [broadcast_listener]
 addr = "0.0.0.0"
 port = 710
+
+[physical]
+machine_height = 185

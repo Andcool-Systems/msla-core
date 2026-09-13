@@ -13,7 +13,9 @@ use std::{
 
 use anyhow::Result;
 use msla_core::{
-    config, logging, shutdown::shutdown_signal, types::printer_manager::{PrinterCommand, PrinterState},
+    config, logging,
+    shutdown::shutdown_signal,
+    types::printer_manager::{PrinterCommand, PrinterState},
 };
 use tokio::sync::{Notify, mpsc, watch};
 use tracing::{Level, error, info};

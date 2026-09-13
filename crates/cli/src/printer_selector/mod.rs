@@ -127,11 +127,45 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
             }
 
             _ = sleep(Duration::from_millis(80)) => {
-                if event::poll(Duration::ZERO)? {
-                     if let Event::Key(key) = event::read()? {
-                        if key.code == KeyCode::Char('c')
-                            && key.modifiers.contains(KeyModifiers::CONTROL)
-                        {
+                if event::poll(Duration::ZERO)?
+                    && let Event::Key(key) = event::read()? {
+
+                    if key.code == KeyCode::Char('c')
+                        && key.modifiers.contains(KeyModifiers::CONTROL) {
+                        disable_raw_mode()?;
+
+                        execute!(
+                            stdout,
+                            Show,
+                        )?;
+
+                        return Err(anyhow!(
+                            "Printer selection cancelled"
+                        ));
+                    }
+
+                    match key.code {
+                        KeyCode::Up => {
+                            if !found.is_empty() {
+                                selected =
+                                    selected.saturating_sub(1);
+                            }
+                        }
+
+                        KeyCode::Down => {
+                            if !found.is_empty() {
+                                selected = (selected + 1)
+                                    .min(found.len() - 1);
+                            }
+                        }
+
+                        KeyCode::Enter => {
+                            if !found.is_empty() {
+                                break;
+                            }
+                        }
+
+                        KeyCode::Esc => {
                             disable_raw_mode()?;
 
                             execute!(
@@ -144,42 +178,7 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
                             ));
                         }
 
-                        match key.code {
-                            KeyCode::Up => {
-                                if !found.is_empty() {
-                                    selected =
-                                        selected.saturating_sub(1);
-                                }
-                            }
-
-                            KeyCode::Down => {
-                                if !found.is_empty() {
-                                    selected = (selected + 1)
-                                        .min(found.len() - 1);
-                                }
-                            }
-
-                            KeyCode::Enter => {
-                                if !found.is_empty() {
-                                    break;
-                                }
-                            }
-
-                            KeyCode::Esc => {
-                                disable_raw_mode()?;
-
-                                execute!(
-                                    stdout,
-                                    Show,
-                                )?;
-
-                                return Err(anyhow!(
-                                    "Printer selection cancelled"
-                                ));
-                            }
-
-                            _ => {}
-                        }
+                        _ => {}
                     }
                 }
                 draw(
@@ -212,9 +211,7 @@ pub async fn run_selector(alt_scan: bool, port: u16) -> Result<FoundPrinter> {
             SetForegroundColor(Color::DarkGreen),
             Print(format!(
                 "\"{}\", ver {} ({})\n",
-                name,
-                ver,
-                selected_printer.ip.to_string()
+                name, ver, selected_printer.ip
             )),
             SetAttribute(Attribute::Reset),
         )?;

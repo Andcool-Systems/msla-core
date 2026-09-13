@@ -1,9 +1,12 @@
 use std::{sync::Arc, time::Instant};
 
-use msla_core::types::{
-    model::{Model, ir::PrintingIR},
-    peripheral::StepperPositioning,
-    printer_manager::{PrinterTaskCommand, PrinterTaskState, PrintingError, PrintingTaskMeta},
+use msla_core::{
+    config,
+    types::{
+        model::{Model, ir::PrintingIR},
+        peripheral::StepperPositioning,
+        printer_manager::{PrinterTaskCommand, PrinterTaskState, PrintingError, PrintingTaskMeta},
+    },
 };
 use tokio::{
     sync::{mpsc::Receiver, watch::Sender},
@@ -183,15 +186,32 @@ impl PrinterTask {
     fn shutdown_peripherals(&mut self) {
         let peripheral_controller = self.peripheral_controller.clone();
         tokio::spawn(async move {
+            let config = config::get_config().await;
+            // Disable UV
             let _ = peripheral_controller.turn_uv(false).await;
-            let _ = peripheral_controller
-                .move_z_to(15f64, 45f64, StepperPositioning::Relative)
-                .await;
-        });
 
-        // other code
+            // Tear off the printed material from the film
+            let _ = peripheral_controller
+                .move_z_to(5f64, 40f64, StepperPositioning::Relative)
+                .await;
+
+            // QWe quickly rise to the topuickly rise to the top
+            let _ = peripheral_controller
+                .move_z_to(
+                    config.physical.machine_height as f64,
+                    300f64,
+                    StepperPositioning::Absolute,
+                )
+                .await;
+
+            // And... Disable stepper!
+            let _ = peripheral_controller.disable_steppers().await;
+        });
     }
 
+    /// Blocks current task until it's resumed or aborted
+    ///
+    /// Returns `false` if aborted, and `true` if resumed
     async fn wait_to_resume(
         &mut self,
         command_receiver: &mut Receiver<PrinterTaskCommand>,
@@ -218,6 +238,9 @@ impl PrinterTask {
         }
     }
 
+    /// Handle external command
+    /// Returns `false` if print aborted,
+    /// and `true` if resumed/paused
     async fn handle_command(&mut self, command: PrinterTaskCommand) -> bool {
         match command {
             PrinterTaskCommand::Abort => {

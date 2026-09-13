@@ -4,12 +4,15 @@ use std::{
     time::Duration,
 };
 
-use crate::types::{
-    model::{
-        GlobalPrintingMeta, Model,
-        ir::{PrintingIR, ZMoving},
+use crate::{
+    config,
+    types::{
+        model::{
+            GlobalPrintingMeta, Model,
+            ir::{PrintingIR, ZMoving},
+        },
+        model_parser::photon::{PhotonFileHeader, PhotonFileLayer},
     },
-    model_parser::photon::{PhotonFileHeader, PhotonFileLayer},
 };
 use anyhow::{Result, anyhow};
 use image::{ImageBuffer, Luma};
@@ -236,7 +239,6 @@ pub async fn load_photon_model(photon_path: impl AsRef<std::path::Path>) -> Resu
     let pixel_count = width as usize * height as usize;
 
     let mut command_vec: Vec<PrintingIR> = Vec::new();
-    let mut absolute_z_pos = 0.0;
 
     // Turn UV off
     command_vec.push(PrintingIR::TurnUV { state: false });
@@ -273,16 +275,14 @@ pub async fn load_photon_model(photon_path: impl AsRef<std::path::Path>) -> Resu
             (header.lifting_distance, header.lifting_speed)
         };
 
-        absolute_z_pos += lift_distance;
         command_vec.push(PrintingIR::MoveZ(ZMoving::new(
-            absolute_z_pos as f64,
+            (layer.height + lift_distance) as f64,
             lift_speed as f64,
         )));
 
         // --- Move z to layer height ---
-        absolute_z_pos = layer.height;
         command_vec.push(PrintingIR::MoveZ(ZMoving::new(
-            absolute_z_pos as f64,
+            layer.height as f64,
             header.retract_speed as f64,
         )));
 
@@ -301,14 +301,17 @@ pub async fn load_photon_model(photon_path: impl AsRef<std::path::Path>) -> Resu
     command_vec.push(PrintingIR::TurnUV { state: false });
 
     // Slowly raise Z a little
-    absolute_z_pos += 5.0;
-    command_vec.push(PrintingIR::MoveZ(ZMoving::new(absolute_z_pos as f64, 30.0)));
+    let last_layer_height = layers.last().map(|l| l.height).unwrap_or_default();
+    command_vec.push(PrintingIR::MoveZ(ZMoving::new(
+        (last_layer_height + 5.0) as f64,
+        30.0,
+    )));
 
     // Fast raise Z to the end
     // Note: Peripheral controller constrains the lifting height
-    absolute_z_pos = 999.0;
+    let config = config::get_config().await;
     command_vec.push(PrintingIR::MoveZ(ZMoving::new(
-        absolute_z_pos as f64,
+        config.physical.machine_height as f64,
         300.0,
     )));
 

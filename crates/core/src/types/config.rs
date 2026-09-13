@@ -13,6 +13,9 @@ pub struct Config {
 
     /// Broadcast listener
     pub broadcast_listener: BroadcastListener,
+
+    /// Physical machine parameters
+    pub physical: Physical,
 }
 
 #[derive(Deserialize, Debug)]
@@ -47,4 +50,10 @@ pub struct BroadcastListener {
 
     /// bc port
     pub port: u16,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Physical {
+    /// Max machine height (mm)
+    pub machine_height: f32,
 }
