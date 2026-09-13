@@ -2,6 +2,7 @@ pub async fn shutdown_signal() {
     #[cfg(unix)]
     {
         use tokio::signal::unix::{SignalKind, signal};
+        use tracing::info;
 
         let mut sigterm =
             signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
