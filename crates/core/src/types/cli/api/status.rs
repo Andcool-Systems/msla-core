@@ -12,8 +12,11 @@ pub struct StatusResponse {
 pub struct CurrentStatusResponse {
     pub current_ir_index: usize,
     pub current_layer: usize,
+    pub current_ir_duration: f64,
     pub estimated_finish_time: f64,
+    pub current_ir_elapsed: f64,
     pub total_elapsed: f64,
+    pub current_ir_description: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

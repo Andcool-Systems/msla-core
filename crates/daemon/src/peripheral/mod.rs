@@ -15,13 +15,22 @@ impl PeripheralController {
     /// Creates new peripheral controller
     pub async fn new() -> Result<Self> {
         let config = get_config().await;
-
-        Ok(Self {
+        let controller = Self {
             uart: UARTClient::new(Uart::open(
                 config.peripheral.uart.clone(),
                 config.peripheral.baud_rate,
             )?)?,
-        })
+        };
+
+        controller.init().await?;
+        Ok(controller)
+    }
+
+    /// Initialize/start code
+    async fn init(&self) -> Result<()> {
+        self.disable_steppers().await?;
+
+        Ok(())
     }
 
     /// Home Z axis

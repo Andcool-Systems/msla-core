@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
+use crate::{lcd::LCDController, peripheral::PeripheralController};
 use msla_core::{
     config,
     types::{
@@ -13,8 +14,6 @@ use tokio::{
     time::sleep,
 };
 use tracing::{debug, error};
-
-use crate::{lcd::LCDController, peripheral::PeripheralController};
 
 /// Main printing task
 pub struct PrinterTask {
@@ -59,14 +58,12 @@ impl PrinterTask {
         for i in 0..self.printing_model.ir.len() {
             self.current_ir_index = i;
             self.current_ir_elapsed = Instant::now();
-            self.send_current_status().await;
 
             match self.state {
                 PrinterTaskState::Aborted | PrinterTaskState::Error(_) => return,
                 PrinterTaskState::Paused(_) => {
                     if !self.wait_to_resume(&mut command_receiver).await {
-                        self.shutdown_peripherals();
-                        self.send_current_status().await;
+                        self.abort().await;
                         return;
                     }
                 },
@@ -74,15 +71,14 @@ impl PrinterTask {
             }
 
             let command = self.printing_model.ir[i].clone();
+            self.state = PrinterTaskState::Printing(self.build_task_meta());
+            self.send_current_status().await;
+
             tokio::select! {
                 result = self.execute_next_step(command.ir) => {
                     match result {
-                        Ok(_) => {
-                            self.state = PrinterTaskState::Printing(
-                                self.build_task_meta()
-                            );
-                        }
                         Err(e) => self.state = PrinterTaskState::Error(e),
+                        _ => {}
                     }
                 }
 
@@ -182,31 +178,30 @@ impl PrinterTask {
         }
     }
 
-    /// Stop or pause peripherals
-    fn shutdown_peripherals(&mut self) {
+    /// Stop peripherals
+    async fn abort_peripherals(&mut self) {
         let peripheral_controller = self.peripheral_controller.clone();
-        tokio::spawn(async move {
-            let config = config::get_config().await;
-            // Disable UV
-            let _ = peripheral_controller.turn_uv(false).await;
 
-            // Tear off the printed material from the film
-            let _ = peripheral_controller
-                .move_z_to(5f64, 40f64, StepperPositioning::Relative)
-                .await;
+        let config = config::get_config().await;
+        // Disable UV
+        let _ = peripheral_controller.turn_uv(false).await;
 
-            // QWe quickly rise to the topuickly rise to the top
-            let _ = peripheral_controller
-                .move_z_to(
-                    config.physical.machine_height as f64,
-                    300f64,
-                    StepperPositioning::Absolute,
-                )
-                .await;
+        // Tear off the printed material from the film
+        let _ = peripheral_controller
+            .move_z_to(5f64, 40f64, StepperPositioning::Relative)
+            .await;
 
-            // And... Disable stepper!
-            let _ = peripheral_controller.disable_steppers().await;
-        });
+        // QWe quickly rise to the topuickly rise to the top
+        let _ = peripheral_controller
+            .move_z_to(
+                config.physical.machine_height as f64,
+                300f64,
+                StepperPositioning::Absolute,
+            )
+            .await;
+
+        // And... Disable stepper!
+        let _ = peripheral_controller.disable_steppers().await;
     }
 
     /// Blocks current task until it's resumed or aborted
@@ -244,8 +239,7 @@ impl PrinterTask {
     async fn handle_command(&mut self, command: PrinterTaskCommand) -> bool {
         match command {
             PrinterTaskCommand::Abort => {
-                self.state = PrinterTaskState::Aborted;
-                self.shutdown_peripherals();
+                self.abort().await;
                 false
             },
 
@@ -267,5 +261,15 @@ impl PrinterTask {
             total_elapsed: self.total_elapsed,
             model: self.printing_model.clone(),
         }
+    }
+
+    async fn abort(&mut self) {
+        self.state = PrinterTaskState::Busy;
+        self.send_current_status().await;
+
+        self.abort_peripherals().await;
+
+        self.state = PrinterTaskState::Aborted;
+        self.send_current_status().await;
     }
 }

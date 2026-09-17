@@ -5,10 +5,7 @@ use actix_multipart::form::{MultipartForm, tempfile::TempFile};
 use actix_web::{HttpResponse, Responder, post, web};
 use msla_core::model_parser::photon::load_photon_model;
 use msla_core::model_parser::zip::load_zip_model;
-use msla_core::types::{
-    printer_manager::{PrinterCommand, PrinterState},
-    rest::RESTPrinterState,
-};
+use msla_core::types::{printer_manager::PrinterCommand, rest::RESTPrinterState};
 use serde_json::json;
 
 #[post("/abort")]
@@ -36,13 +33,10 @@ pub async fn start_print(
     state: web::Data<RESTPrinterState>,
     MultipartForm(form): MultipartForm<UploadForm>,
 ) -> impl Responder {
-    match state.state.borrow().clone() {
-        PrinterState::Printing(_) | PrinterState::Paused(_) => {
-            return HttpResponse::Conflict().json(
-                json!({"message": "Printer is still printing. Abort print before starting new!"}),
-            );
-        },
-        _ => {},
+    if state.state.borrow().is_busy() {
+        return HttpResponse::Conflict().json(
+            json!({"message": "Printer is still printing. Abort print before starting new!"}),
+        );
     }
 
     let mut file_handler = None;
@@ -95,13 +89,9 @@ pub async fn start_print(
 
 #[post("/home")]
 pub async fn home(state: web::Data<RESTPrinterState>) -> impl Responder {
-    match state.state.borrow().clone() {
-        PrinterState::Printing(_) | PrinterState::Paused(_) => {
-            return HttpResponse::BadRequest().json(json!({"message": "Printer is printing now!"}));
-        },
-
-        _ => {},
-    };
+    if state.state.borrow().is_busy() {
+        return HttpResponse::Conflict().json(json!({"message": "Printer is busy!"}));
+    }
 
     match state.command_tx.send(PrinterCommand::Home).await {
         Ok(_) => HttpResponse::Created().json(json!({"message": "Home task signal sent"})),
@@ -113,13 +103,9 @@ pub async fn home(state: web::Data<RESTPrinterState>) -> impl Responder {
 
 #[post("/disable-stepper")]
 pub async fn dis_stepper(state: web::Data<RESTPrinterState>) -> impl Responder {
-    match state.state.borrow().clone() {
-        PrinterState::Printing(_) | PrinterState::Paused(_) => {
-            return HttpResponse::BadRequest().json(json!({"message": "Printer is printing now!"}));
-        },
-
-        _ => {},
-    };
+    if state.state.borrow().is_busy() {
+        return HttpResponse::Conflict().json(json!({"message": "Printer is busy!"}));
+    }
 
     match state.command_tx.send(PrinterCommand::DisableStepper).await {
         Ok(_) => {

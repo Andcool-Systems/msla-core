@@ -1,10 +1,6 @@
-use crate::types::model::{
-    analyzer::Analyzer,
-    ir::{PrintingIR, TimedIR},
-};
+use crate::types::model::ir::{PrintingIR, TimedIR};
 use std::{path::PathBuf, sync::Arc, time::Duration};
 use tempfile::TempDir;
-pub mod analyzer;
 pub mod ir;
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -59,11 +55,10 @@ impl Model {
                 pos = mov.pos;
             }
         }
-        let mut analyzer = Analyzer::default();
         let mut duration = Duration::ZERO;
 
         for x in self.ir.iter_mut().rev() {
-            duration += analyzer.calc_command_duration(&x.ir);
+            duration += x.calc_command_duration();
             x.estimated_remaining = duration;
         }
 

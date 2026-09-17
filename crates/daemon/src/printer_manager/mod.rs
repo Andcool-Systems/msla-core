@@ -6,7 +6,9 @@ use crate::{
 };
 use msla_core::types::{
     model::Model,
-    printer_manager::{PrinterCommand, PrinterState, PrinterTaskCommand, PrinterTaskState},
+    printer_manager::{
+        PrinterCommand, PrinterState, PrinterTaskCommand, PrinterTaskState, PrintingError,
+    },
 };
 use std::sync::Arc;
 use tokio::sync::{
@@ -99,6 +101,9 @@ impl PrinterManager {
                                 PrinterTaskState::Idle =>
                                     self.state = PrinterState::Idle,
 
+                                PrinterTaskState::Busy =>
+                                    self.state = PrinterState::Busy,
+
                                 PrinterTaskState::Aborted => {
                                     info!("Print aborted");
                                     self.state = PrinterState::Aborted;
@@ -153,12 +158,13 @@ impl PrinterManager {
     }
 
     /// Send command into printing task
-    async fn send_to_print_task(&self, task: PrinterTaskCommand) {
+    async fn send_to_print_task(&mut self, task: PrinterTaskCommand) {
         if let Some(tx) = &self.print_task_command_transmitter {
-            let _ = tx
-                .send(task)
-                .await
-                .map_err(|e| error!("Cannot send to a print task: {e}"));
+            let _ = tx.send(task).await.map_err(|e| {
+                error!("Cannot send to a print task: {e}");
+                self.state =
+                    PrinterState::Error(PrintingError::new("Cannot send to a print task: {e}"))
+            });
         }
     }
 

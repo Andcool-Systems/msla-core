@@ -20,6 +20,7 @@ pub enum PrinterState {
     Printing(PrintingTaskMeta),
     Paused(PrintingTaskMeta),
     Error(PrintingError),
+    Busy,
     Aborted,
     Finished,
 }
@@ -31,8 +32,17 @@ impl PrinterState {
             Self::Printing(_) => "printing",
             Self::Paused(_) => "paused",
             Self::Error(_) => "error",
+            Self::Busy => "busy",
             Self::Aborted => "aborted",
             Self::Finished => "finished",
+        }
+    }
+
+    /// Check if printer state is busy or printing
+    pub fn is_busy(&self) -> bool {
+        match self {
+            PrinterState::Printing(_) | PrinterState::Paused(_) | PrinterState::Busy => true,
+            _ => false,
         }
     }
 }
@@ -62,6 +72,7 @@ pub enum PrinterTaskState {
     Printing(PrintingTaskMeta),
     Paused(PrintingTaskMeta),
     Error(PrintingError),
+    Busy,
     Aborted,
     Finished,
     Idle,

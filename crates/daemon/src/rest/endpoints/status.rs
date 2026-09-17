@@ -28,17 +28,22 @@ pub async fn get_status(state: web::Data<RESTPrinterState>) -> impl Responder {
 
     match printer_state {
         PrinterState::Printing(meta) | PrinterState::Paused(meta) => {
-            let est = meta
-                .model
-                .ir
-                .get(meta.current_ir_index)
+            let current_ir = meta.model.ir.get(meta.current_ir_index);
+            let est = current_ir
                 .map(|ir| ir.estimated_remaining)
+                .unwrap_or_default();
+
+            let current_ir_duration = current_ir
+                .map(|ir| ir.calc_command_duration())
                 .unwrap_or_default();
 
             res.current_status = Some(json!({
                 "current_layer": meta.printing_layer,
                 "current_ir_index": meta.current_ir_index,
+                "current_ir_duration": current_ir_duration.as_secs_f64(),
+                "current_ir_description": current_ir.map(|ir| ir.ir.to_string()).unwrap_or("unknown".to_owned()),
                 "estimated_finish_time": est.checked_sub(meta.current_ir_elapsed.elapsed()).unwrap_or_default().as_secs_f64(),
+                "current_ir_elapsed": meta.current_ir_elapsed.elapsed().as_secs_f64(),
                 "total_elapsed": meta.total_elapsed.elapsed().as_secs_f64()
             }));
 
