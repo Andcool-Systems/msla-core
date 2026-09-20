@@ -1,13 +1,18 @@
 pub mod printer_task;
 
 use crate::{
-    lcd::LCDController, peripheral::PeripheralController,
+    lcd::LCDController,
+    peripheral::PeripheralController,
     printer_manager::printer_task::PrinterTask,
 };
 use msla_core::types::{
     model::Model,
     printer_manager::{
-        PrinterCommand, PrinterState, PrinterTaskCommand, PrinterTaskState, PrintingError,
+        PrinterCommand,
+        PrinterState,
+        PrinterTaskCommand,
+        PrinterTaskState,
+        PrintingError,
     },
 };
 use std::sync::Arc;

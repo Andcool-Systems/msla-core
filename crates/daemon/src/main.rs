@@ -13,7 +13,8 @@ use std::{
 
 use anyhow::Result;
 use msla_core::{
-    config, logging,
+    config,
+    logging,
     shutdown::shutdown_signal,
     types::printer_manager::{PrinterCommand, PrinterState},
 };
@@ -21,8 +22,11 @@ use tokio::sync::{Notify, mpsc, watch};
 use tracing::{Level, error, info};
 
 use crate::{
-    broadcast::start_broadcast, lcd::LCDController, peripheral::PeripheralController,
-    printer_manager::PrinterManager, rest::build_rest_api,
+    broadcast::start_broadcast,
+    lcd::LCDController,
+    peripheral::PeripheralController,
+    printer_manager::PrinterManager,
+    rest::build_rest_api,
 };
 
 #[tokio::main]

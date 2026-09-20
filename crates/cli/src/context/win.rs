@@ -1,16 +1,13 @@
-use std::env;
-use std::path::Path;
-use std::path::PathBuf;
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
-use anyhow::Result;
-use anyhow::anyhow;
-use dialoguer::Input;
-use dialoguer::Select;
-use dialoguer::theme::ColorfulTheme;
+use anyhow::{Result, anyhow};
+use dialoguer::{Input, Select, theme::ColorfulTheme};
 use tokio::fs;
 use tracing::info;
-use winreg::RegKey;
-use winreg::enums::*;
+use winreg::{RegKey, enums::*};
 
 const APP_FOLDER_NAME: &str = "OpenMSLA";
 const TARGET_EXE_NAME: &str = "msla-cli.exe";

@@ -8,7 +8,8 @@ use crate::{
     config,
     types::{
         model::{
-            GlobalPrintingMeta, Model,
+            GlobalPrintingMeta,
+            Model,
             ir::{PrintingIR, ZMoving},
         },
         model_parser::photon::{PhotonFileHeader, PhotonFileLayer},

@@ -91,7 +91,7 @@
             "label": "Rust fmt",
             "detail": "Run rust fmt",
             "type": "shell",
-            "command": "cargo fmt",
+            "command": "cargo +nightly fmt",
             "group": {
                 "kind": "test",
                 "isDefault": false

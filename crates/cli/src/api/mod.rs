@@ -2,8 +2,10 @@ use std::path::PathBuf;
 
 use anyhow::{Result, anyhow};
 use msla_core::types::cli::api::status::StatusResponse;
-use reqwest::Client;
-use reqwest::multipart::{Form, Part};
+use reqwest::{
+    Client,
+    multipart::{Form, Part},
+};
 use serde_json::Value;
 use tracing::info;
 

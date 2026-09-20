@@ -2,7 +2,8 @@ use crate::uart::{UARTCommand, Uart, packet::UARTPacket};
 use anyhow::{Result, anyhow};
 use std::{
     sync::{
-        Arc, OnceLock,
+        Arc,
+        OnceLock,
         mpsc::{self, Sender},
     },
     thread,

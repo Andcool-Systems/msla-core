@@ -1,10 +1,9 @@
-use std::time::{Duration, Instant};
-
 use crate::api::ApiService;
 use anyhow::{Result, anyhow};
 use colored::Colorize;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use msla_core::types::cli::api::status::StatusResponse;
+use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use tokio_retry::{
     Retry,
@@ -35,6 +34,8 @@ fn capitalize(s: &str) -> String {
     }
 }
 
+const PROGRESS_CHARS: &str = "=> ";
+
 /// Display cli statusbar
 pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> Result<()> {
     let mp = MultiProgress::new();
@@ -45,8 +46,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
     let duration = Duration::from_secs(period);
     let mut status: StatusResponse = api_client.get_status().await?;
     let mut estimated = Duration::ZERO;
-    let mut estimated_elapsed = Instant::now();
-    let mut current_ir_instant = Instant::now();
+    let mut last_update_time = Instant::now();
     let mut updated = true;
     let mut first_init = true;
     let mut fetch_flag = false;
@@ -54,7 +54,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
     pb_total.set_style(
         ProgressStyle::with_template(&format!("{} [{{bar:40}}] {{msg}}", "Printer".green()))
             .unwrap()
-            .progress_chars("=> "),
+            .progress_chars(PROGRESS_CHARS),
     );
 
     let retry_strategy = ExponentialBackoff::from_millis(100).map(jitter).take(3);
@@ -98,7 +98,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                             " ".repeat(header_max_len.saturating_sub(header.len()))
                         ))
                         .unwrap()
-                        .progress_chars("=> "),
+                        .progress_chars(PROGRESS_CHARS),
                     );
 
                     pb_it_ref.set_style(
@@ -108,7 +108,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                             " ".repeat(header_max_len.saturating_sub(ir_header_str.len()))
                         ))
                         .unwrap()
-                        .progress_chars("=> "),
+                        .progress_chars(PROGRESS_CHARS),
                     );
 
                     if first_init {
@@ -117,8 +117,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                     }
 
                     estimated = Duration::from_secs_f64(current_status.estimated_finish_time);
-                    estimated_elapsed = Instant::now();
-                    current_ir_instant = Instant::now();
+                    last_update_time = Instant::now();
                 }
 
                 let percent =
@@ -128,11 +127,11 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                 pb_total.set_message(format!(
                     "{percent:.2}% ({}: {})",
                     "ETA".bold(),
-                    format_duration(estimated.saturating_sub(estimated_elapsed.elapsed()))
+                    format_duration(estimated.saturating_sub(last_update_time.elapsed()))
                 ));
 
                 let mut elapsed =
-                    current_ir_instant.elapsed().as_secs_f64() + current_status.current_ir_elapsed;
+                    current_status.current_ir_elapsed + last_update_time.elapsed().as_secs_f64();
 
                 if elapsed > current_status.current_ir_duration
                     && current_status.current_ir_duration != 0.0
@@ -172,7 +171,7 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                     "Total elapsed".bold(),
                     format_duration(
                         Duration::from_secs_f64(current_status.total_elapsed)
-                            + estimated_elapsed.elapsed()
+                            + last_update_time.elapsed()
                     )
                 ));
 

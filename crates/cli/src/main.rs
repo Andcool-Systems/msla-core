@@ -12,8 +12,7 @@ use msla_core::{
     types::cli::args::{Args, Command},
 };
 use notify_rust::{Notification, Urgency};
-use std::path::PathBuf;
-use std::process;
+use std::{path::PathBuf, process};
 use tracing::{error, info};
 
 mod api;
@@ -26,8 +25,10 @@ mod status;
 
 #[cfg(windows)]
 fn set_console_visible(visible: bool) {
-    use windows::Win32::System::Console::GetConsoleWindow;
-    use windows::Win32::UI::WindowsAndMessaging::{SW_HIDE, SW_SHOW, ShowWindow};
+    use windows::Win32::{
+        System::Console::GetConsoleWindow,
+        UI::WindowsAndMessaging::{SW_HIDE, SW_SHOW, ShowWindow},
+    };
 
     unsafe {
         let hwnd = GetConsoleWindow();

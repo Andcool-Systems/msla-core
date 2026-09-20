@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use actix_multipart::form::text::Text;
-use actix_multipart::form::{MultipartForm, tempfile::TempFile};
+use actix_multipart::form::{MultipartForm, tempfile::TempFile, text::Text};
 use actix_web::{HttpResponse, Responder, post, web};
-use msla_core::model_parser::photon::load_photon_model;
-use msla_core::model_parser::zip::load_zip_model;
-use msla_core::types::{printer_manager::PrinterCommand, rest::RESTPrinterState};
+use msla_core::{
+    model_parser::{photon::load_photon_model, zip::load_zip_model},
+    types::{printer_manager::PrinterCommand, rest::RESTPrinterState},
+};
 use serde_json::json;
 
 #[post("/abort")]
