@@ -69,13 +69,13 @@ jobs:
 
           cp \
             "target/${{ matrix.target }}/release/msla-cli${{ matrix.extension }}" \
-            "dist/msla-cli-v${{ steps.version.outputs.version }}-${{ matrix.target }}${{ matrix.extension }}"
+            "dist/msla-cli-${{ matrix.target }}${{ matrix.extension }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msla-cli-${{ matrix.target }}
-          path: dist/msla-cli-v${{ steps.version.outputs.version }}-${{ matrix.target }}${{ matrix.extension }}
+          path: dist/msla-cli-${{ matrix.target }}${{ matrix.extension }}
 
   release:
     needs: build
