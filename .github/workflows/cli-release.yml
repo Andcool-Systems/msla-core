@@ -1,0 +1,98 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - "cli-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            extension: .exe
+
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            extension: ""
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#cli-v}"
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $VERSION"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cargo-edit
+        run: cargo install cargo-edit
+
+      - name: Set CLI version
+        run: |
+          cargo set-version \
+            --package msla-cli \
+            "${{ steps.version.outputs.version }}"
+
+      - name: Build CLI
+        run: |
+          cargo build \
+            --release \
+            --target ${{ matrix.target }} \
+            --package msla-cli \
+            --bin msla-cli
+
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+
+          cp \
+            "target/${{ matrix.target }}/release/msla-cli${{ matrix.extension }}" \
+            "dist/msla-cli-v${{ steps.version.outputs.version }}-${{ matrix.target }}${{ matrix.extension }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msla-cli-${{ matrix.target }}
+          path: dist/msla-cli-v${{ steps.version.outputs.version }}-${{ matrix.target }}${{ matrix.extension }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: msla-cli ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/*
