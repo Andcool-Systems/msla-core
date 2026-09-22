@@ -20,7 +20,7 @@
 
 ## Daemon Features
 - Fully async
-- Reading `.zip` model files
+- Reading `.zip` and `.photon` model files
 - Interprets IR into printer commands
 - Communicating with [peripheral](https://github.com/Andcool-Systems/msla-peripheral) ESP32 through custom byte- UART-based protocol
 - Hosting a REST API for remote print controlling
