@@ -1,7 +1,8 @@
-<img src="resources/logo.png" align="left" height="40" />
+<p align="center">
+  <img src="resources/logo.png" height="64" />
+</p>
 
-
-# &nbsp;DIY MSLA 3D Printer Core Code
+<h1 align="center">DIY MSLA 3D Printer Core Code</h1>
 
 <img src="https://img.shields.io/endpoint?url=https://ghloc.vercel.app/api/Andcool-Systems/msla-core/badge?filter=.rs$"/>
 
