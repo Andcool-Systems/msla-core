@@ -1,4 +1,8 @@
-# DIY MSLA 3D Printer Core Code
+<img src="resources/logo.png" align="left" height="40" />
+
+
+# &nbsp;DIY MSLA 3D Printer Core Code
+
 <img src="https://img.shields.io/endpoint?url=https://ghloc.vercel.app/api/Andcool-Systems/msla-core/badge?filter=.rs$"/>
 
 ---
