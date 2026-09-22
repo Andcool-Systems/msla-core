@@ -119,4 +119,25 @@ impl PeripheralController {
 
         Ok(())
     }
+
+    /// Get stepper pos (mm)
+    pub async fn get_stepper_pos(&self) -> Result<f64> {
+        let mut res = self
+            .uart
+            .request(UARTPacket::new(62, &[]), Duration::from_millis(500), 3)
+            .await?;
+
+        res.read_double()
+            .ok_or(anyhow!("Cannot extract stepper pos"))
+    }
+
+    /// Get current uv state
+    pub async fn get_uv_state(&self) -> Result<bool> {
+        let mut res = self
+            .uart
+            .request(UARTPacket::new(64, &[]), Duration::from_millis(500), 3)
+            .await?;
+
+        res.read_bool().ok_or(anyhow!("Cannot extract uv state"))
+    }
 }

@@ -6,7 +6,7 @@ use msla_core::{
     types::{
         model::{Model, ir::PrintingIR},
         peripheral::StepperPositioning,
-        printer_manager::{PrinterTaskCommand, PrinterTaskState, PrintingError, PrintingTaskMeta},
+        printer_manager::{PrinterCommand, PrinterState, PrintingError, PrintingTaskMeta},
     },
 };
 use tokio::{
@@ -23,9 +23,9 @@ pub struct PrinterTask {
     current_ir_elapsed: Instant,
     total_elapsed: Instant,
 
-    state: PrinterTaskState,
+    state: PrinterState,
 
-    state_sender: Sender<PrinterTaskState>,
+    state_sender: Sender<PrinterState>,
 
     peripheral_controller: PeripheralController,
     lcd_controller: LCDController,
@@ -33,7 +33,7 @@ pub struct PrinterTask {
 
 impl PrinterTask {
     pub fn new(
-        state_sender: Sender<PrinterTaskState>,
+        state_sender: Sender<PrinterState>,
         printing_model: Arc<Model>,
         peripheral_controller: PeripheralController,
         lcd_controller: LCDController,
@@ -43,7 +43,7 @@ impl PrinterTask {
             printing_model,
             peripheral_controller,
             lcd_controller,
-            state: PrinterTaskState::Idle,
+            state: PrinterState::Idle,
             current_layer: 0,
             current_ir_index: 0,
             current_ir_elapsed: Instant::now(),
@@ -51,17 +51,18 @@ impl PrinterTask {
         }
     }
 
-    pub async fn run(&mut self, mut command_receiver: Receiver<PrinterTaskCommand>) {
+    pub async fn run(&mut self, mut command_receiver: Receiver<PrinterCommand>) {
         self.total_elapsed = Instant::now();
-        self.state = PrinterTaskState::Printing(self.build_task_meta());
+        self.state = PrinterState::Printing(self.build_task_meta());
 
         for i in 0..self.printing_model.ir.len() {
             self.current_ir_index = i;
             self.current_ir_elapsed = Instant::now();
 
             match self.state {
-                PrinterTaskState::Aborted | PrinterTaskState::Error(_) => return,
-                PrinterTaskState::Paused(_) => {
+                PrinterState::Aborted | PrinterState::Error(_) => return,
+                PrinterState::Paused(_) => {
+                    #[allow(clippy::collapsible_match)]
                     if !self.wait_to_resume(&mut command_receiver).await {
                         self.abort().await;
                         return;
@@ -71,15 +72,15 @@ impl PrinterTask {
             }
 
             let command = self.printing_model.ir[i].clone();
-            self.state = PrinterTaskState::Printing(self.build_task_meta());
+            self.state = PrinterState::Printing(self.build_task_meta());
             self.send_current_status().await;
 
             tokio::select! {
                 result = self.execute_next_step(command.ir) => {
-                    match result {
-                        Err(e) => self.state = PrinterTaskState::Error(e),
-                        _ => {}
+                    if let Err(e) = result {
+                        self.state = PrinterState::Error(e)
                     }
+
                 }
 
                 command = command_receiver.recv() => {
@@ -100,7 +101,9 @@ impl PrinterTask {
             }
         }
 
-        self.state = PrinterTaskState::Finished;
+        self.state = PrinterState::Finished {
+            total_elapsed: self.total_elapsed,
+        };
         self.send_current_status().await;
     }
 
@@ -207,22 +210,21 @@ impl PrinterTask {
     /// Blocks current task until it's resumed or aborted
     ///
     /// Returns `false` if aborted, and `true` if resumed
-    async fn wait_to_resume(
-        &mut self,
-        command_receiver: &mut Receiver<PrinterTaskCommand>,
-    ) -> bool {
+    async fn wait_to_resume(&mut self, command_receiver: &mut Receiver<PrinterCommand>) -> bool {
         loop {
             match command_receiver.recv().await {
                 Some(c) => match c {
-                    PrinterTaskCommand::Pause => {},
-                    PrinterTaskCommand::Resume => {
-                        self.state = PrinterTaskState::Printing(self.build_task_meta());
+                    PrinterCommand::Pause => {},
+                    PrinterCommand::Resume => {
+                        self.state = PrinterState::Printing(self.build_task_meta());
                         return true;
                     },
-                    PrinterTaskCommand::Abort => {
-                        self.state = PrinterTaskState::Aborted;
+                    PrinterCommand::Abort => {
+                        self.state = PrinterState::Aborted;
                         return false;
                     },
+
+                    _ => {},
                 },
 
                 None => {
@@ -236,20 +238,21 @@ impl PrinterTask {
     /// Handle external command
     /// Returns `false` if print aborted,
     /// and `true` if resumed/paused
-    async fn handle_command(&mut self, command: PrinterTaskCommand) -> bool {
+    async fn handle_command(&mut self, command: PrinterCommand) -> bool {
         match command {
-            PrinterTaskCommand::Abort => {
+            PrinterCommand::Abort => {
                 self.abort().await;
                 false
             },
 
-            PrinterTaskCommand::Pause => {
-                self.state = PrinterTaskState::Paused(self.build_task_meta());
+            PrinterCommand::Pause => {
+                self.state = PrinterState::Paused(self.build_task_meta());
                 let _ = self.peripheral_controller.turn_uv(false).await;
                 true
             },
 
-            PrinterTaskCommand::Resume => true,
+            PrinterCommand::Resume => true,
+            _ => true,
         }
     }
 
@@ -264,12 +267,12 @@ impl PrinterTask {
     }
 
     async fn abort(&mut self) {
-        self.state = PrinterTaskState::Busy;
+        self.state = PrinterState::Busy;
         self.send_current_status().await;
 
         self.abort_peripherals().await;
 
-        self.state = PrinterTaskState::Aborted;
+        self.state = PrinterState::Aborted;
         self.send_current_status().await;
     }
 }

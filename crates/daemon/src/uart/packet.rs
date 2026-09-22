@@ -119,6 +119,14 @@ impl UARTPacket {
             self.payload.get(pos..pos + 2)?.try_into().ok()?,
         ))
     }
+
+    /// Read next double
+    pub fn read_double(&mut self) -> Option<f64> {
+        let pos = self.extend_reader(8);
+        Some(f64::from_le_bytes(
+            self.payload.get(pos..pos + 8)?.try_into().ok()?,
+        ))
+    }
 }
 
 impl UARTPacket {

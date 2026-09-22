@@ -6,7 +6,9 @@ use msla_core::{
     model_parser::{photon::load_photon_model, zip::load_zip_model},
     types::{printer_manager::PrinterCommand, rest::RESTPrinterState},
 };
+use serde::Deserialize;
 use serde_json::json;
+use validator::Validate;
 
 #[post("/abort")]
 pub async fn abort_print(state: web::Data<RESTPrinterState>) -> impl Responder {
@@ -113,5 +115,40 @@ pub async fn dis_stepper(state: web::Data<RESTPrinterState>) -> impl Responder {
         },
         Err(_) => HttpResponse::InternalServerError()
             .json(json!({"message": "Cannot send disable stepper signal"})),
+    }
+}
+
+#[derive(Deserialize, Validate)]
+struct MoveTo {
+    pub pos: f64,
+
+    #[validate(range(min = 0.5, max = 300.0, message = "Invalid speed"))]
+    pub speed: f64,
+}
+
+#[post("/move-to")]
+pub async fn move_to(
+    state: web::Data<RESTPrinterState>,
+    item: web::Json<MoveTo>,
+) -> impl Responder {
+    if let Err(errors) = item.validate() {
+        return HttpResponse::BadRequest().json(errors);
+    }
+
+    if state.state.borrow().is_busy() {
+        return HttpResponse::Conflict().json(json!({"message": "Printer is busy!"}));
+    }
+
+    match state
+        .command_tx
+        .send(PrinterCommand::MoveTo {
+            pos: item.pos,
+            speed: item.speed,
+        })
+        .await
+    {
+        Ok(_) => HttpResponse::Created().json(json!({"message": "Moving command sent"})),
+        Err(_) => HttpResponse::InternalServerError()
+            .json(json!({"message": "Cannot send moving signal"})),
     }
 }

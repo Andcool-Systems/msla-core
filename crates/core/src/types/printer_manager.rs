@@ -10,6 +10,7 @@ pub enum PrinterCommand {
     Abort,
     Home,
     DisableStepper,
+    MoveTo { pos: f64, speed: f64 },
 }
 
 /// Global printer state
@@ -22,7 +23,9 @@ pub enum PrinterState {
     Error(PrintingError),
     Busy,
     Aborted,
-    Finished,
+    Finished {
+        total_elapsed: Instant,
+    },
 }
 
 impl PrinterState {
@@ -34,25 +37,17 @@ impl PrinterState {
             Self::Error(_) => "error",
             Self::Busy => "busy",
             Self::Aborted => "aborted",
-            Self::Finished => "finished",
+            Self::Finished { total_elapsed: _ } => "finished",
         }
     }
 
     /// Check if printer state is busy or printing
     pub fn is_busy(&self) -> bool {
-        match self {
-            PrinterState::Printing(_) | PrinterState::Paused(_) | PrinterState::Busy => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            PrinterState::Printing(_) | PrinterState::Paused(_) | PrinterState::Busy
+        )
     }
-}
-
-/// Outgoing commands for printer task
-#[derive(Debug)]
-pub enum PrinterTaskCommand {
-    Pause,
-    Resume,
-    Abort,
 }
 
 /// Current print state metadata
@@ -63,19 +58,6 @@ pub struct PrintingTaskMeta {
     pub current_ir_elapsed: Instant,
     pub total_elapsed: Instant,
     pub model: Arc<Model>,
-}
-
-/// State of current printing task
-#[derive(Clone, Debug)]
-pub enum PrinterTaskState {
-    /// Printing layer #
-    Printing(PrintingTaskMeta),
-    Paused(PrintingTaskMeta),
-    Error(PrintingError),
-    Busy,
-    Aborted,
-    Finished,
-    Idle,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -41,6 +41,18 @@ pub enum Command {
 
     /// Change cli configuration
     ChangeConfig(ConfigChange),
+
+    /// Move Z axis to
+    MoveTo(MoveTo),
+}
+
+#[derive(Parser, Debug)]
+pub struct MoveTo {
+    #[arg(long, help = "Position in mm")]
+    pub pos: f64,
+
+    #[arg(long, help = "Speed in mm/s")]
+    pub speed: Option<f64>,
 }
 
 #[derive(Parser, Debug)]

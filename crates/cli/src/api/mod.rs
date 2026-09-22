@@ -6,7 +6,7 @@ use reqwest::{
     Client,
     multipart::{Form, Part},
 };
-use serde_json::Value;
+use serde_json::{Value, json};
 use tracing::info;
 
 pub enum PlacingType {
@@ -123,7 +123,6 @@ impl ApiService {
             );
         }
 
-        info!("Print started! Enjoy the spectacle of printing :)");
         Ok(())
     }
 
@@ -143,7 +142,6 @@ impl ApiService {
             );
         }
 
-        info!("Print aborted");
         Ok(())
     }
 
@@ -162,8 +160,6 @@ impl ApiService {
                 Self::extract_field(&text, "message").unwrap_or(text)
             );
         }
-
-        info!("Printer homing...");
         Ok(())
     }
 
@@ -182,8 +178,26 @@ impl ApiService {
                 Self::extract_field(&text, "message").unwrap_or(text)
             );
         }
+        Ok(())
+    }
 
-        info!("Z stepper disabled");
+    /// Move z stepper to
+    pub async fn move_to(&self, pos: f64, speed: f64) -> Result<()> {
+        let response = self
+            .client
+            .post(format!("{}/move-to", self.url))
+            .header("content-type", "application/json")
+            .body(serde_json::to_vec(&json!({"pos": pos, "speed": speed}))?)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let text = response.text().await?;
+            anyhow::bail!(
+                "Cannot send move stepper signal to printer: {}",
+                Self::extract_field(&text, "message").unwrap_or(text)
+            );
+        }
         Ok(())
     }
 }

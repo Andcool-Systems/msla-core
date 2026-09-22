@@ -161,11 +161,15 @@ async fn execute(args: &Args) -> Result<()> {
                         error!("Please, specify the file path: --local <path> or --remote <path>")
                     }
 
+                    println!("Print started! Enjoy the spectacle of printing :)");
                     if start_args.watch {
                         show_status(&api_client, true, 10).await?;
                     }
                 },
-                Command::Abort => api_client.abort().await?,
+                Command::Abort => {
+                    api_client.abort().await?;
+                    println!("Print aborted");
+                },
                 Command::Pause => todo!(),
                 Command::Resume => todo!(),
                 Command::Status(status_args) => {
@@ -176,10 +180,23 @@ async fn execute(args: &Args) -> Result<()> {
                     )
                     .await?;
                 },
-                Command::Home => api_client.home().await?,
-                Command::DisableStepper => api_client.disable_stepper().await?,
+                Command::Home => {
+                    api_client.home().await?;
+                    println!("Printer homing...");
+                },
+                Command::DisableStepper => {
+                    api_client.disable_stepper().await?;
+                    println!("Steppers disabled...");
+                },
                 Command::ShowPreview => {
                     info!("Open url: {}/preview", api_client.url)
+                },
+
+                Command::MoveTo(move_to) => {
+                    api_client
+                        .move_to(move_to.pos, move_to.speed.unwrap_or(50.0))
+                        .await?;
+                    println!("Printer start moving...");
                 },
 
                 Command::ContextRegister

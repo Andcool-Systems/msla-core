@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ffi::OsStr, path::PathBuf, time::Duration};
+use std::{borrow::Cow, ffi::OsStr, fmt, path::PathBuf, time::Duration};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum PrintingIR {
@@ -40,25 +40,28 @@ impl PrintingIR {
             estimated_remaining: Duration::default(),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl fmt::Display for PrintingIR {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PrintingIR::Home => "homing".to_owned(),
-            PrintingIR::MoveZ(z_moving) => format!("moving to {:.2}", z_moving.pos),
+            PrintingIR::Home => write!(f, "homing"),
+            PrintingIR::MoveZ(z_moving) => write!(f, "moving to {:.2}", z_moving.pos),
             PrintingIR::TurnUV { state } => {
-                format!("turning {} UV", if *state { "on" } else { "off" })
+                write!(f, "turning {} UV", if *state { "on" } else { "off" })
             },
-            PrintingIR::ShowImage(path_buf) => format!(
+            PrintingIR::ShowImage(path_buf) => write!(
+                f,
                 "showing image \"{}\"",
                 path_buf
                     .file_name()
                     .map(OsStr::to_string_lossy)
                     .unwrap_or(Cow::Borrowed("<unknown>"))
             ),
-            PrintingIR::Wait(duration) => format!("waiting {:?}", duration),
-            PrintingIR::DisableSteppers => "disabling stepper".to_owned(),
-            PrintingIR::EnableSteppers => "enabling stepper".to_string(),
-            PrintingIR::SetStepperCurrent(c) => format!("setting stepper current to {c}mA"),
+            PrintingIR::Wait(duration) => write!(f, "waiting {:?}", duration),
+            PrintingIR::DisableSteppers => write!(f, "disabling stepper"),
+            PrintingIR::EnableSteppers => write!(f, "enabling stepper"),
+            PrintingIR::SetStepperCurrent(c) => write!(f, "setting stepper current to {c}mA"),
         }
     }
 }
