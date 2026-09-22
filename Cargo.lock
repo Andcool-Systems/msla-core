@@ -2232,7 +2232,7 @@ dependencies = [
 
 [[package]]
 name = "msla-cli"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "clap",
@@ -2260,7 +2260,7 @@ dependencies = [
 
 [[package]]
 name = "msla-core"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "clap",
@@ -2276,7 +2276,7 @@ dependencies = [
 
 [[package]]
 name = "msla-daemon"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "actix-files",
  "actix-multipart",
