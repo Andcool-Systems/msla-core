@@ -1,5 +1,6 @@
 use crate::uart::{SYNC_BYTES, SYNC_LEN};
 use anyhow::{Result, anyhow};
+use tracing::debug;
 
 /// CRC8 Generator
 fn crc8(data: &[u8]) -> u8 {
@@ -86,6 +87,8 @@ impl UARTPacket {
         buff.extend(&finish_payload);
 
         buff.push(crc8(&finish_payload));
+
+        debug!("Sending packet: {:?}", buff);
 
         buff
     }

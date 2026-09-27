@@ -60,10 +60,15 @@ impl PrinterTask {
             self.current_ir_elapsed = Instant::now();
 
             match self.state {
-                PrinterState::Aborted | PrinterState::Error(_) => return,
-                PrinterState::Paused(_) => {
+                PrinterState::Aborted | PrinterState::Error(_) => {
+                    self.send_current_status().await;
+                    return;
+                },
+                PrinterState::Paused(_) =>
+                {
                     #[allow(clippy::collapsible_match)]
                     if !self.wait_to_resume(&mut command_receiver).await {
+                        self.send_current_status().await;
                         self.abort().await;
                         return;
                     }
