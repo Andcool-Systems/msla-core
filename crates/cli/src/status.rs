@@ -1,5 +1,6 @@
 use crate::api::ApiService;
 use anyhow::{Result, anyhow};
+use chrono::{Local, Utc};
 use colored::Colorize;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use msla_core::types::cli::api::status::StatusResponse;
@@ -148,6 +149,27 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                     "{:.2}/{:.2}s",
                     elapsed, current_status.current_ir_duration
                 ));
+
+                message_lines.push(format!(
+                    "{}: {}",
+                    "Total elapsed".bold(),
+                    format_duration(
+                        Duration::from_secs_f64(current_status.total_elapsed)
+                            + last_update_time.elapsed()
+                    )
+                ));
+
+                let completion_timestamp =
+                    Utc::now() + estimated.saturating_sub(last_update_time.elapsed());
+
+                message_lines.push(format!(
+                    "{}: {}\n",
+                    "Completion time".bold(),
+                    completion_timestamp
+                        .with_timezone(&Local)
+                        .format("%H:%M:%S %d.%m.%Y")
+                ));
+
                 message_lines.push(format!(
                     "{}: {}/{}",
                     "Layer".bold(),
@@ -165,14 +187,6 @@ pub async fn show_status(api_client: &ApiService, watch: bool, period: u64) -> R
                     "Height".bold(),
                     current_status.current_layer as f64 * model_meta.layer_height.unwrap_or(0.05),
                     model_meta.total_layer_count as f64 * model_meta.layer_height.unwrap_or(0.05)
-                ));
-                message_lines.push(format!(
-                    "{}: {}",
-                    "Total elapsed".bold(),
-                    format_duration(
-                        Duration::from_secs_f64(current_status.total_elapsed)
-                            + last_update_time.elapsed()
-                    )
                 ));
 
                 pb_it_ref.set_message(message_lines.join("\n"));

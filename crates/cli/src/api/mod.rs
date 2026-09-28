@@ -7,7 +7,6 @@ use reqwest::{
     multipart::{Form, Part},
 };
 use serde_json::{Value, json};
-use tracing::info;
 
 pub enum PlacingType {
     Local,
