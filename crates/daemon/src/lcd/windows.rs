@@ -7,7 +7,7 @@ use tracing::debug;
 pub struct LCDController {}
 
 impl LCDController {
-    pub fn new() -> Result<Self> {
+    pub async fn new() -> Result<Self> {
         Ok(Self {})
     }
 

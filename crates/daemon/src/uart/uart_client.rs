@@ -100,14 +100,7 @@ impl UARTClient {
                 *pending = Some(tx);
             }
 
-            {
-                let w = self.writer.get();
-                let writer = w
-                    .as_ref()
-                    .ok_or_else(|| anyhow::anyhow!("Uart writer is not initialized"))?;
-
-                writer.send(UARTCommand::Send(packet.clone()))?;
-            }
+            self.send(packet.clone()).await?;
 
             match timeout(response_timeout, rx).await {
                 Ok(Ok(response)) => {
@@ -138,6 +131,17 @@ impl UARTClient {
         }
 
         anyhow::bail!("Uart request timeout after {} retries", retries)
+    }
+
+    /// Send packet to uart
+    pub async fn send(&self, packet: UARTPacket) -> Result<()> {
+        let w = self.writer.get();
+        let writer = w
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Uart writer is not initialized"))?;
+
+        writer.send(UARTCommand::Send(packet.clone()))?;
+        Ok(())
     }
 
     /// Receive the package and send it

@@ -140,4 +140,14 @@ impl PeripheralController {
 
         res.read_bool().ok_or(anyhow!("Cannot extract uv state"))
     }
+
+    /// Set system fan speed
+    pub async fn set_sys_fan_speed(&self, speed: u8) -> Result<()> {
+        let mut packet = UARTPacket::new_empty(70);
+        packet.write_u8(speed);
+
+        self.uart.send(packet).await?;
+
+        Ok(())
+    }
 }

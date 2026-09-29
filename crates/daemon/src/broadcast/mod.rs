@@ -1,10 +1,25 @@
 use anyhow::Result;
 use msla_core::config;
 use tokio::net::UdpSocket;
-use tracing::debug;
+use tracing::{debug, error, info};
 
 /// Start broadcast listener
 pub async fn start_broadcast() -> Result<()> {
+    tokio::select! {
+        res = broadcast() => {
+            if let Err(e) = res {
+                error!("Broadcast listener err: {}", e);
+            }
+        },
+        _ = tokio::signal::ctrl_c() => {
+            info!("Stopping broadcast server");
+        }
+    }
+
+    Ok(())
+}
+
+async fn broadcast() -> Result<()> {
     let config = config::get_config().await;
     let socket = UdpSocket::bind((
         config.broadcast_listener.addr.clone(),

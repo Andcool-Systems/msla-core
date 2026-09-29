@@ -3,6 +3,7 @@ mod lcd;
 mod peripheral;
 mod printer_manager;
 mod rest;
+mod sys_fan;
 mod uart;
 
 use std::{
@@ -27,6 +28,7 @@ use crate::{
     peripheral::PeripheralController,
     printer_manager::PrinterManager,
     rest::build_rest_api,
+    sys_fan::start_fan,
 };
 
 #[tokio::main]
@@ -59,7 +61,11 @@ async fn main() -> Result<()> {
     let peripheral_controller = PeripheralController::new().await?;
 
     // Create lcd controller - wrapper around the linux framebuffer
-    let lcd_controller = LCDController::new()?;
+    let lcd_controller = LCDController::new().await?;
+
+    // Start fan controlling cycle
+    let fan_controller = peripheral_controller.clone();
+    tokio::spawn(async { start_fan(fan_controller).await });
 
     // Build and run REST API
     let rest = build_rest_api(

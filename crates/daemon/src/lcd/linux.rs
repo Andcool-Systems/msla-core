@@ -5,8 +5,10 @@ use std::{
     fs::{File, OpenOptions},
     path::PathBuf,
     sync::Arc,
+    time::Duration,
 };
-use tracing::debug;
+use tokio::{process::Command, time::sleep};
+use tracing::{debug, info};
 
 /// Printer LCD display controller
 #[derive(Clone)]
@@ -16,7 +18,38 @@ pub struct LCDController {
 
 impl LCDController {
     /// Create new LCD controller
-    pub fn new() -> Result<Self> {
+    pub async fn new() -> Result<Self> {
+        // Reinit HDMI Display
+        let o = Command::new("/usr/bin/modetest")
+            .arg("-M")
+            .arg("sun4i-drm")
+            .arg("-w")
+            .arg("53:DPMS:3")
+            .output()
+            .await?;
+
+        info!(
+            "LCD INIT: {} {}",
+            String::from_utf8_lossy(&o.stdout),
+            String::from_utf8_lossy(&o.stderr)
+        );
+
+        sleep(Duration::from_secs(1)).await;
+
+        let o = Command::new("/usr/bin/modetest")
+            .arg("-M")
+            .arg("sun4i-drm")
+            .arg("-w")
+            .arg("53:DPMS:0")
+            .output()
+            .await?;
+
+        info!(
+            "LCD INIT: {} {}",
+            String::from_utf8_lossy(&o.stdout),
+            String::from_utf8_lossy(&o.stderr)
+        );
+
         let fb = Arc::new(OpenOptions::new().read(true).write(true).open("/dev/fb0")?);
 
         Ok(Self { fb })

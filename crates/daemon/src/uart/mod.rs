@@ -3,6 +3,7 @@ pub mod uart_client;
 use anyhow::{Result, anyhow};
 use serialport::SerialPort;
 use std::time::{Duration, Instant};
+use tracing::debug;
 
 use crate::uart::packet::UARTPacket;
 
@@ -79,7 +80,10 @@ impl Uart {
         let mut temp = [0u8; 64];
 
         match self._serial.read(&mut temp) {
-            Ok(n) => self._buffer.extend_from_slice(&temp[..n]),
+            Ok(n) => {
+                self._buffer.extend_from_slice(&temp[..n]);
+                debug!("Received packet: {:?}", self._buffer);
+            },
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {},
             Err(e) => return Err(e.into()),
         }
