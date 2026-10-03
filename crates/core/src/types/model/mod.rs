@@ -7,7 +7,7 @@ pub mod ir;
 pub struct GlobalPrintingMeta {
     pub file_name: Option<String>,
     pub total_layer_count: usize,
-    pub estimated_printing_time: Option<usize>,
+    pub estimated_printing_time: usize,
     pub volume: Option<f32>,
     pub weight: Option<f32>,
     pub price: Option<f32>,
@@ -62,6 +62,6 @@ impl Model {
             x.estimated_remaining = duration;
         }
 
-        self.model_meta.estimated_printing_time = Some(duration.as_secs() as usize);
+        self.model_meta.estimated_printing_time = duration.as_secs() as usize;
     }
 }

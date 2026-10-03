@@ -16,6 +16,9 @@ pub struct Config {
 
     /// Physical machine parameters
     pub physical: Physical,
+
+    /// Control display params
+    pub control_display: ControlDisplay,
 }
 
 #[derive(Deserialize, Debug)]
@@ -56,4 +59,11 @@ pub struct BroadcastListener {
 pub struct Physical {
     /// Max machine height (mm)
     pub machine_height: f32,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ControlDisplay {
+    pub uart: String,
+
+    pub baud_rate: u32,
 }

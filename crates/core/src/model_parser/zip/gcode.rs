@@ -196,10 +196,6 @@ impl GCodeParser {
         let (comm, data) = line.split_once(':').unwrap_or((line, ""));
 
         match comm.trim().to_lowercase().as_str() {
-            "estimatedprinttime" => {
-                self.meta.estimated_printing_time = try_parse_number!(data, usize);
-            },
-
             "volume" => {
                 self.meta.volume = try_parse_number!(data, f32);
             },

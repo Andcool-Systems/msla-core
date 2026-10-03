@@ -1,4 +1,5 @@
 mod broadcast;
+mod control_display;
 mod lcd;
 mod peripheral;
 mod printer_manager;
@@ -24,11 +25,13 @@ use tracing::{Level, error, info};
 
 use crate::{
     broadcast::start_broadcast,
+    control_display::spawn_control_display_thread,
     lcd::LCDController,
     peripheral::PeripheralController,
     printer_manager::PrinterManager,
     rest::build_rest_api,
     sys_fan::start_fan,
+    uart::Uart,
 };
 
 #[tokio::main]
@@ -75,6 +78,15 @@ async fn main() -> Result<()> {
         ),
         state_rx.clone(),
         command_tx.clone(),
+    )?;
+
+    spawn_control_display_thread(
+        Uart::open(
+            config.control_display.uart.clone(),
+            config.control_display.baud_rate,
+        )?,
+        command_tx,
+        state_rx,
     )?;
 
     tokio::spawn(rest);

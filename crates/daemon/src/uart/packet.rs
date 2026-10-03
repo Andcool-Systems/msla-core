@@ -142,4 +142,19 @@ impl UARTPacket {
     pub fn write_u8(&mut self, val: u8) {
         self.payload.extend(val.to_le_bytes());
     }
+
+    /// Write u32 to end of packet payload
+    pub fn write_u32(&mut self, val: u32) {
+        self.payload.extend(val.to_le_bytes());
+    }
+
+    /// Write f32 to end of packet payload
+    pub fn write_f32(&mut self, val: f32) {
+        self.payload.extend(val.to_le_bytes());
+    }
+
+    /// Write f64 to end of packet payload
+    pub fn write_f64(&mut self, val: f64) {
+        self.payload.extend(val.to_le_bytes());
+    }
 }

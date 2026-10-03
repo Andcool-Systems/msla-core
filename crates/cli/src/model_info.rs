@@ -35,7 +35,7 @@ pub async fn print_model_info(model_info_args: &ModelInfoArgs) -> Result<()> {
             "{}: {}",
             "Estimated print time".bold(),
             format_duration(Duration::from_secs(
-                model.model_meta.estimated_printing_time.unwrap_or(0) as u64
+                model.model_meta.estimated_printing_time as u64
             ))
         ),
         format!(

@@ -1,0 +1,134 @@
+use std::thread;
+
+use anyhow::Result;
+use msla_core::types::printer_manager::{PrinterCommand, PrinterState};
+use tokio::sync::{mpsc::Sender, watch::Receiver};
+use tracing::error;
+
+use crate::{
+    control_display::preview_loader::get_preview_bytes,
+    uart::{Uart, packet::UARTPacket},
+};
+
+mod preview_loader;
+
+/// Create display thread
+pub fn spawn_control_display_thread(
+    mut uart: Uart,
+    sender: Sender<PrinterCommand>,
+    receiver: Receiver<PrinterState>,
+) -> Result<()> {
+    thread::spawn(move || {
+        loop {
+            match uart.read() {
+                Ok(Some(packet)) => {
+                    if let Some(p) = handle_command(packet, sender.clone(), receiver.clone()) {
+                        let _ = uart.send(p);
+                    }
+                },
+                Ok(None) => continue,
+                Err(err) => {
+                    error!("Failed to read from Uart: {:?}", err);
+                    continue;
+                },
+            }
+        }
+    });
+
+    Ok(())
+}
+
+fn handle_command(
+    mut packet: UARTPacket,
+    sender: Sender<PrinterCommand>,
+    state: Receiver<PrinterState>,
+) -> Option<UARTPacket> {
+    match packet.packet_id {
+        // General status request
+        10 => {
+            let mut p = UARTPacket::new_empty(packet.packet_id + 1);
+
+            match state.borrow().clone() {
+                PrinterState::Idle => p.write_u8(0),
+                PrinterState::Printing(s) => {
+                    let current_ir = s.model.ir.get(s.current_ir_index);
+                    let est = current_ir
+                        .map(|ir| ir.estimated_remaining)
+                        .unwrap_or_default();
+
+                    let current_ir_duration = current_ir
+                        .map(|ir| ir.calc_command_duration())
+                        .unwrap_or_default();
+
+                    p.write_u8(1);
+
+                    // LAYERS
+                    // current layer
+                    p.write_u16(s.printing_layer as u16);
+                    // total layers
+                    p.write_u16(s.model.model_meta.total_layer_count as u16);
+
+                    // IR
+                    // current ir index
+                    p.write_u32(s.current_ir_index as u32);
+                    // total ir len
+                    p.write_u32(s.model.ir.len() as u32);
+
+                    // IR DURATION
+                    // duration of current ir
+                    p.write_u32(current_ir_duration.as_secs_f32() as u32);
+                    // full estimated printing time
+                    p.write_u32(s.model.model_meta.estimated_printing_time as u32);
+                    // estimated finish time
+                    p.write_u32(
+                        est.checked_sub(s.current_ir_elapsed.elapsed())
+                            .unwrap_or_default()
+                            .as_secs() as u32,
+                    );
+
+                    // total elapsed secs
+                    p.write_u32(s.total_elapsed.elapsed().as_secs() as u32);
+                },
+                PrinterState::Paused(_) => p.write_u8(2),
+                PrinterState::Error(_) => p.write_u8(3),
+                PrinterState::Busy => p.write_u8(4),
+                PrinterState::Aborted => p.write_u8(5),
+                PrinterState::Finished { total_elapsed: _ } => p.write_u8(6),
+            };
+
+            Some(p)
+        },
+
+        20 => {
+            let side = packet.read_u16().unwrap();
+            let count = packet.read_u16().unwrap();
+            let offset = packet.read_u16().unwrap();
+
+            Some(match get_preview_bytes(state, side, count, offset) {
+                Ok(result) => {
+                    let mut p = UARTPacket::new_empty(packet.packet_id + 1);
+                    p.write_u8(0); // SUCCESS
+                    p.write_u16(result.len() as u16);
+                    p.payload.extend(result);
+
+                    p
+                },
+                Err(e) => {
+                    error!("Preview load error: {e}");
+                    let mut p = UARTPacket::new_empty(packet.packet_id + 1);
+                    p.write_u8(1); // ERROR
+
+                    p
+                },
+            })
+        },
+
+        // abort command
+        40 => {
+            let _ = sender.blocking_send(PrinterCommand::Abort);
+            None
+        },
+
+        _ => None,
+    }
+}

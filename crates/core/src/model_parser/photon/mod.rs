@@ -333,7 +333,7 @@ pub async fn load_photon_model(photon_path: impl AsRef<std::path::Path>) -> Resu
             .file_name()
             .map(|s| s.to_string_lossy().into_owned()),
         total_layer_count: header.layer_count as usize,
-        estimated_printing_time: None,
+        estimated_printing_time: 0,
         volume: None,
         weight: None,
         price: None,
