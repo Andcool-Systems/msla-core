@@ -70,13 +70,17 @@ impl PrinterManager {
                             self.send_to_print_task(command).await,
 
                         PrinterCommand::Home => {
+                            let _ = self.state_transmitter.send(PrinterState::Busy);
                             let _ = self.peripheral_controller.home_z().await;
+                            let _ = self.state_transmitter.send(PrinterState::Idle);
                         },
                         PrinterCommand::DisableStepper => {
                             let _ = self.peripheral_controller.disable_steppers().await;
                         },
                         PrinterCommand::MoveTo {pos, speed} => {
+                            let _ = self.state_transmitter.send(PrinterState::Busy);
                             let _ = self.peripheral_controller.move_z_to(pos, speed, StepperPositioning::Absolute).await;
+                            let _ = self.state_transmitter.send(PrinterState::Idle);
                         }
                     }
                 }

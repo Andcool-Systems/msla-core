@@ -129,6 +129,14 @@ fn handle_command(
             None
         },
 
+        // Home command
+        56 => {
+            if !state.borrow().is_busy() {
+                let _ = sender.blocking_send(PrinterCommand::Home);
+            }
+            None
+        },
+
         _ => None,
     }
 }
