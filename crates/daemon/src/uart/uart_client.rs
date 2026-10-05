@@ -1,6 +1,7 @@
 use crate::uart::{UARTCommand, Uart, packet::UARTPacket};
 use anyhow::{Result, anyhow};
 use std::{
+    collections::HashMap,
     sync::{
         Arc,
         OnceLock,
@@ -19,7 +20,7 @@ pub struct UARTClient {
     pub writer: OnceLock<Sender<UARTCommand>>,
 
     /// Waiting to answer
-    pending: Mutex<Option<oneshot::Sender<UARTPacket>>>,
+    pending: Mutex<HashMap<u8, oneshot::Sender<UARTPacket>>>,
 }
 
 impl UARTClient {
@@ -70,7 +71,7 @@ impl UARTClient {
     pub fn new(uart: Uart) -> Result<Arc<Self>> {
         let cl = Arc::new(Self {
             writer: OnceLock::new(),
-            pending: Mutex::new(None),
+            pending: Mutex::new(HashMap::default()),
         });
 
         cl.clone().spawn_uart(uart)?;
@@ -93,39 +94,37 @@ impl UARTClient {
             {
                 let mut pending = self.pending.lock().await;
 
-                if pending.is_some() {
-                    anyhow::bail!("Uart is already waiting for response");
+                if pending.contains_key(&response_id) {
+                    anyhow::bail!(
+                        "Uart request with response_id 0x{:02X} is already pending",
+                        response_id
+                    );
                 }
 
-                *pending = Some(tx);
+                pending.insert(response_id, tx);
             }
 
-            self.send(packet.clone()).await?;
+            if let Err(err) = self.send(packet.clone()).await {
+                self.pending.lock().await.remove(&response_id);
+                return Err(err);
+            }
 
             match timeout(response_timeout, rx).await {
                 Ok(Ok(response)) => {
                     if response.packet_id != response_id {
-                        warn!(
-                            "Uart: Received unexpected response_id: {} != {}",
-                            response.packet_id, response_id
-                        );
-                        self.pending.lock().await.take();
-
                         continue;
                     }
-
                     return Ok(response);
                 },
 
                 Ok(Err(_)) => {
+                    self.pending.lock().await.remove(&response_id);
                     anyhow::bail!("Uart reader stopped");
                 },
 
                 Err(_) => {
                     warn!("Uart: timeout waiting for 0x{:02X}", response_id);
-
-                    // Удаляем старый receiver.
-                    self.pending.lock().await.take();
+                    self.pending.lock().await.remove(&response_id);
                 },
             }
         }
@@ -148,16 +147,21 @@ impl UARTClient {
     async fn handle_packet(&self, packet: UARTPacket) {
         let tx = {
             let mut pending = self.pending.lock().await;
-            pending.take()
+            pending.remove(&packet.packet_id)
         };
 
         if let Some(tx) = tx {
             let _ = tx.send(packet);
+        } else {
+            warn!(
+                "Uart: Received unexpected packet 0x{:02X}",
+                packet.packet_id
+            );
         }
     }
 
     /// Resets all pending mutexes
     pub async fn reset_client(&self) {
-        *(self.pending.lock().await) = None;
+        self.pending.lock().await.clear();
     }
 }

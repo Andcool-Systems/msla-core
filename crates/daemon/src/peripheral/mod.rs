@@ -6,6 +6,12 @@ use anyhow::{Result, anyhow};
 use msla_core::types::peripheral::{MovingZStatus, StepperPositioning};
 use std::{sync::Arc, time::Duration};
 
+#[derive(Debug)]
+pub struct PhysicalState {
+    pub z_pos: f64,
+    pub uv_state: bool,
+}
+
 #[derive(Clone)]
 pub struct PeripheralController {
     pub uart: Arc<UARTClient>,
@@ -121,24 +127,18 @@ impl PeripheralController {
     }
 
     /// Get stepper pos (mm)
-    pub async fn get_stepper_pos(&self) -> Result<f64> {
+    pub async fn get_physical_state(&self) -> Result<PhysicalState> {
         let mut res = self
             .uart
-            .request(UARTPacket::new(62, &[]), Duration::from_millis(500), 3)
+            .request(UARTPacket::new(62, &[]), Duration::from_millis(1000), 3)
             .await?;
 
-        res.read_double()
-            .ok_or(anyhow!("Cannot extract stepper pos"))
-    }
-
-    /// Get current uv state
-    pub async fn get_uv_state(&self) -> Result<bool> {
-        let mut res = self
-            .uart
-            .request(UARTPacket::new(64, &[]), Duration::from_millis(500), 3)
-            .await?;
-
-        res.read_bool().ok_or(anyhow!("Cannot extract uv state"))
+        Ok(PhysicalState {
+            uv_state: res.read_bool().ok_or(anyhow!("Cannot extract uv state"))?,
+            z_pos: res
+                .read_double()
+                .ok_or(anyhow!("Cannot extract stepper pos"))?,
+        })
     }
 
     /// Set system fan speed

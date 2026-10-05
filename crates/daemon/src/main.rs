@@ -87,6 +87,7 @@ async fn main() -> Result<()> {
         )?,
         command_tx,
         state_rx,
+        peripheral_controller.clone(),
     )?;
 
     tokio::spawn(rest);
