@@ -157,4 +157,12 @@ impl UARTPacket {
     pub fn write_f64(&mut self, val: f64) {
         self.payload.extend(val.to_le_bytes());
     }
+
+    /// Write string
+    ///
+    /// Buffer layout: <len u16> <bytes>
+    pub fn write_string(&mut self, str: String) {
+        self.write_u16(str.len() as u16);
+        self.payload.extend(str.bytes());
+    }
 }
