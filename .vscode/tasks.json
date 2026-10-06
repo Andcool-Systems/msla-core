@@ -46,6 +46,27 @@
             }
         },
         {
+            "label": "Deploy",
+            "detail": "Build Rust application and send to printer",
+            "type": "shell",
+            "command": "./dep.ps1",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "runOptions": {
+                "reevaluateOnRerun": true
+            },
+            "options": {
+                "statusbar": {
+                    "label": "$(build) Deploy"
+                }
+            }
+        },
+        {
             "label": "Test",
             "detail": "Test Rust application",
             "type": "shell",

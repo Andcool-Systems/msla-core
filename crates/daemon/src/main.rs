@@ -80,6 +80,9 @@ async fn main() -> Result<()> {
         command_tx.clone(),
     )?;
 
+    tokio::spawn(rest);
+
+    // Spawn thread for UI display
     spawn_control_display_thread(
         Uart::open(
             config.control_display.uart.clone(),
@@ -89,8 +92,6 @@ async fn main() -> Result<()> {
         state_rx,
         peripheral_controller.clone(),
     )?;
-
-    tokio::spawn(rest);
 
     // Start broadcast server
     tokio::spawn(async { start_broadcast().await });
