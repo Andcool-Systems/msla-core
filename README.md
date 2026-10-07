@@ -27,7 +27,7 @@
 - Fully async
 - Reading `.zip` and `.photon` model files
 - Interprets IR into printer commands
-- Communicating with [peripheral](https://github.com/Andcool-Systems/msla-peripheral) ESP32 through custom byte- UART-based protocol
+- Communicating with [peripheral](https://github.com/Andcool-Systems/msla-peripheral) ESP32 and [control display](https://github.com/Andcool-Systems/msla-display) ESP32 through custom byte- UART-based protocol
 - Hosting a REST API for remote print controlling
 - Allows to find printers in LAN
 - Uses native Linux framebuffer to display layer images
