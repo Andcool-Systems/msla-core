@@ -76,6 +76,14 @@ fn handle_command(
             Some(p)
         },
 
+        // Machine info
+        14 => {
+            let mut p = UARTPacket::new_empty(packet.packet_id + 1);
+
+            p.write_string(env!("CARGO_PKG_VERSION").to_owned());
+            Some(p)
+        },
+
         20 => {
             let side = packet.read_u16().ok_or(anyhow!("can't parse"))?;
             let count = packet.read_u16().ok_or(anyhow!("can't parse"))?;
