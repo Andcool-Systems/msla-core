@@ -6,6 +6,7 @@ mod printer_manager;
 mod rest;
 mod sys_fan;
 mod uart;
+mod usb_service;
 
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
@@ -32,6 +33,7 @@ use crate::{
     rest::build_rest_api,
     sys_fan::start_fan,
     uart::Uart,
+    usb_service::start_usb_service,
 };
 
 #[tokio::main]
@@ -83,15 +85,20 @@ async fn main() -> Result<()> {
     tokio::spawn(rest);
 
     // Spawn thread for UI display
-    spawn_control_display_thread(
-        Uart::open(
-            config.control_display.uart.clone(),
-            config.control_display.baud_rate,
-        )?,
-        command_tx,
-        state_rx,
-        peripheral_controller.clone(),
-    )?;
+    let display_uart = Uart::open(
+        config.control_display.uart.clone(),
+        config.control_display.baud_rate,
+    );
+
+    match display_uart {
+        Ok(du) => {
+            spawn_control_display_thread(du, command_tx, state_rx, peripheral_controller.clone())?
+        },
+        Err(e) => error!("Display connection failed: {e}, starting without it..."),
+    }
+
+    // Start usb mounter service task
+    tokio::spawn(async { start_usb_service().await });
 
     // Start broadcast server
     tokio::spawn(async { start_broadcast().await });

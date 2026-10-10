@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -19,6 +21,9 @@ pub struct Config {
 
     /// Control display params
     pub control_display: ControlDisplay,
+
+    /// Auto-mounter of usb device
+    pub usb_controller: UsbMounter,
 }
 
 #[derive(Deserialize, Debug)]
@@ -66,4 +71,19 @@ pub struct ControlDisplay {
     pub uart: String,
 
     pub baud_rate: u32,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct UsbMounter {
+    /// Path for scanning a usb devices, e.g. /dev/disk/by-path
+    pub scan_path: PathBuf,
+
+    /// Regex for specific usb device/port
+    pub usb_path_regex: String,
+
+    /// Path for mounting root (/mnt/usb)
+    pub mount_point: PathBuf,
+
+    /// Period of dir scanning (seconds)
+    pub scan_period: u32,
 }

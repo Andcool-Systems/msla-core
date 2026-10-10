@@ -152,8 +152,7 @@ impl GCodeParser {
             .strip_prefix("S")
             .and_then(|power| power.parse::<f32>().ok())
         {
-            self.ir
-                .push(PrintingIR::TurnUV { state: power > 0.0 }.to_timed_ir());
+            self.ir.push(PrintingIR::TurnUV(power > 0.0).to_timed_ir());
         }
 
         true

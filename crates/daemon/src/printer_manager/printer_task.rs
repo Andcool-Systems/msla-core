@@ -130,7 +130,7 @@ impl PrinterTask {
                     .map_err(|e| PrintingError::new(format!("Cannot move Z axis: {e}")))?;
             },
 
-            PrintingIR::TurnUV { state } => {
+            PrintingIR::TurnUV(state) => {
                 debug!("Turn {} UV", if state { "on" } else { "off" });
                 self.peripheral_controller
                     .turn_uv(state)

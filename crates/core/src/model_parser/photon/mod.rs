@@ -242,7 +242,7 @@ pub async fn load_photon_model(photon_path: impl AsRef<std::path::Path>) -> Resu
     let mut command_vec: Vec<PrintingIR> = Vec::new();
 
     // Turn UV off
-    command_vec.push(PrintingIR::TurnUV { state: false });
+    command_vec.push(PrintingIR::TurnUV(false));
 
     // Home printer
     command_vec.push(PrintingIR::Home);
@@ -288,18 +288,18 @@ pub async fn load_photon_model(photon_path: impl AsRef<std::path::Path>) -> Resu
         )));
 
         // ------- Turn UV on --------
-        command_vec.push(PrintingIR::TurnUV { state: true });
+        command_vec.push(PrintingIR::TurnUV(true));
 
         // ---------- Wait... --------
         command_vec.push(PrintingIR::Wait(Duration::from_secs_f32(layer.exposure)));
 
         // ------- Turn UV off --------
-        command_vec.push(PrintingIR::TurnUV { state: false });
+        command_vec.push(PrintingIR::TurnUV(false));
     }
 
     // Print-end code
     // Turn off UV
-    command_vec.push(PrintingIR::TurnUV { state: false });
+    command_vec.push(PrintingIR::TurnUV(false));
 
     // Slowly raise Z a little
     let last_layer_height = layers.last().map(|l| l.height).unwrap_or_default();

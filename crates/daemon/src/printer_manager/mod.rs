@@ -146,7 +146,7 @@ impl PrinterManager {
 
     /// Clear all communications with print task
     async fn reset_state(&mut self) {
-        self.peripheral_controller.uart.reset_client().await;
+        self.peripheral_controller.reset_client().await;
         self.print_task_command_transmitter = None;
         self.print_task_state_receiver = None;
     }

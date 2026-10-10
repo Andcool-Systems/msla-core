@@ -1,0 +1,43 @@
+[global]
+# Logging level of daemon
+logging_level = "debug"
+
+# Machine name, displayed in cli utility
+machine_name = "dev"
+
+[peripheral]
+# Serial port in which connected peripheral controller
+# Can be a symlink
+uart = "COM9"
+
+# Baud-rate of serial communication
+baud_rate = 115200
+
+[rest_api]
+addr = "0.0.0.0"
+port = 709
+
+[broadcast_listener]
+addr = "0.0.0.0"
+port = 710
+
+[physical]
+machine_height = 185
+
+[control_display]
+uart = "COM7"
+baud_rate = 115200
+
+
+[usb_controller]
+# Path for scanning a usb devices, e.g. /dev/disk/by-path
+scan_path = "/dev/disk/by-path"
+
+# Regex for specific usb device/port
+usb_path_regex = "^.*usb-[^/]+-scsi-0:0:0:0-part[0-9]+$"
+
+# Path for mounting root (/mnt/usb)
+mount_point = "/mnt/usb"
+
+# Period of dir scanning (seconds)
+scan_period = 1

@@ -5,7 +5,7 @@ pub enum PrintingIR {
     Home,
 
     MoveZ(ZMoving),
-    TurnUV { state: bool },
+    TurnUV(bool),
 
     ShowImage(PathBuf),
     Wait(Duration),
@@ -47,7 +47,7 @@ impl fmt::Display for PrintingIR {
         match self {
             PrintingIR::Home => write!(f, "homing"),
             PrintingIR::MoveZ(z_moving) => write!(f, "moving to {:.2}", z_moving.pos),
-            PrintingIR::TurnUV { state } => {
+            PrintingIR::TurnUV(state) => {
                 write!(f, "turning {} UV", if *state { "on" } else { "off" })
             },
             PrintingIR::ShowImage(path_buf) => write!(
@@ -103,7 +103,7 @@ impl TimedIR {
             PrintingIR::Wait(duration) => *duration,
 
             // 200ms - Approx time of communication with peripheral, awaiting answer, etc.
-            PrintingIR::TurnUV { state: _ }
+            PrintingIR::TurnUV(_)
             | PrintingIR::EnableSteppers
             | PrintingIR::DisableSteppers
             | PrintingIR::SetStepperCurrent(_)

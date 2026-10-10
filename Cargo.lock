@@ -2333,6 +2333,7 @@ dependencies = [
  "image",
  "memmap2",
  "msla-core",
+ "regex",
  "serde",
  "serde_json",
  "serialport",
